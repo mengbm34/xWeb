@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd 前端 && git init && git add . && git commit -m \\\"feat: 初始化商品出库前端项目\\n\\n- 商品列表展示（支持搜索、筛选）\\n- 出库申请表单（申请人、出库原因必填）\\n- 响应式布局适配\\n- 本地服务器开发环境\\\"\",\"description\":\"Initialize git and create initial c...",
+  "error": "Exit code 1\n(eval):cd:1: no such file or directory: 前端",
+  "timestamp": "2026-05-11T15:53:09.257Z",
+  "retry_count": 1
+}

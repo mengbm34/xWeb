@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Cache-Control" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>出库商品</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- 顶部栏 -->
+  <header class="topbar">
+    <h1>出库商品</h1>
+    <div class="topbar-search">
+      <input type="text" id="searchInline" placeholder="搜索商品名称或编码..." autocomplete="off">
+    </div>
+  </header>
+
+  <!-- 搜索栏（移动端） -->
+  <div class="search-bar mobile-only">
+    <input type="text" id="searchInput" placeholder="搜索商品名称或编码..." autocomplete="off">
+  </div>
+
+  <!-- 桌面端布局容器 -->
+  <div class="layout-wrapper">
+    <!-- 桌面端侧栏分类 -->
+    <nav class="sidebar-tabs desktop-only" id="sidebarTabs">
+      <!-- JS 动态渲染 -->
+    </nav>
+
+    <!-- 商品列表 -->
+    <main class="product-list" id="productList">
+      <!-- JS 动态渲染 -->
+    </main>
+
+    <!-- 桌面端购物车侧栏 -->
+    <aside class="cart-summary desktop-only" id="cartSummary">
+      <h3>已选商品</h3>
+      <div class="cart-items" id="cartItems"></div>
+      <div class="cart-form">
+        <div class="cart-form-group">
+          <label>申请人 <span class="required">*必填</span></label>
+          <input type="text" id="inputNameDesktop" class="cart-input" placeholder="请输入申请人姓名" maxlength="50" required>
+        </div>
+        <div class="cart-form-group">
+          <label>出库原因 <span class="required">*必填</span></label>
+          <textarea id="inputRemarkDesktop" class="cart-input cart-textarea" placeholder="请输入出库原因" maxlength="500" required></textarea>
+        </div>
+      </div>
+      <div class="cart-footer">
+        <div class="cart-total" id="cartTotal">¥0.00</div>
+        <div class="cart-count" id="cartCount">已选 0 种，共 0 件</div>
+        <button class="btn-checkout" id="btnCheckoutDesktop" disabled>去结算</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 移动端分类标签 -->
+  <nav class="tab-bar mobile-only" id="tabBar">
+    <!-- JS 动态渲染 -->
+  </nav>
+
+  <!-- 移动端底部结算栏 -->
+  <div class="checkout-bar mobile-only">
+    <div class="checkout-form">
+      <input type="text" id="inputName" class="checkout-input" placeholder="申请人姓名 *" maxlength="50" required>
+      <input type="text" id="inputRemark" class="checkout-input" placeholder="出库原因 *" maxlength="500" required>
+    </div>
+    <div class="checkout-footer">
+      <div class="checkout-info">
+        <div class="checkout-total" id="checkoutTotal">¥0.00</div>
+        <div class="checkout-count" id="checkoutCount">已选 0 种，共 0 件</div>
+      </div>
+      <button class="btn-checkout" id="btnCheckout" disabled>去结算</button>
+    </div>
+  </div>
+
+  <!-- 结算弹窗 -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h2 class="modal-title">提交出货单</h2>
+      <div class="modal-form">
+        <!-- 已选商品明细 -->
+        <div class="order-items" id="orderItems"></div>
+
+        <div class="form-group">
+          <label>申请人 <span class="required">*必填</span></label>
+          <input type="text" id="inputName" placeholder="请输入申请人姓名" maxlength="50" required>
+        </div>
+        <div class="form-group">
+          <label>出库原因 <span class="required">*必填</span></label>
+          <textarea id="inputRemark" placeholder="请输入出库原因" maxlength="500" required></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btnCancel">取消</button>
+        <button class="btn-submit" id="btnSubmitOrder"><span class="btn-text">提交出货单</span><span class="btn-spinner" aria-hidden="true"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 提示 -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
