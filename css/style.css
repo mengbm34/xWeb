@@ -398,6 +398,14 @@ body {
   outline: none;
 }
 
+/* ---- 加载态 ---- */
+.admin-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
 /* ---- 空状态 ---- */
 .empty-state {
   text-align: center;

@@ -1,0 +1,507 @@
+/* ========================================
+   商品管理后台样式
+   复用 style.css 的设计令牌
+   ======================================== */
+
+body {
+  background: var(--bg);
+  padding-bottom: 24px;
+}
+
+/* ---- 鉴权遮罩层 ---- */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+
+.auth-overlay.hidden {
+  display: none;
+}
+
+.auth-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 32px 24px;
+  width: 90%;
+  max-width: 360px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  animation: fadeInScale 0.25s ease;
+}
+
+.auth-card h2 {
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.auth-card .form-group {
+  margin-bottom: 16px;
+}
+
+.auth-card label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  background: var(--bg);
+  transition: border-color 0.2s;
+}
+
+.auth-card input:focus {
+  border-color: var(--primary);
+}
+
+.auth-card .btn-auth {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--primary);
+  color: #fff;
+  transition: background 0.2s;
+}
+
+.auth-card .btn-auth:active {
+  background: var(--primary-dark);
+}
+
+/* ---- 管理顶栏 ---- */
+.admin-topbar {
+  background: #2d2d2d;
+  color: #fff;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.admin-topbar h1 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.admin-topbar .btn-logout {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-topbar .btn-logout:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---- 主内容容器 ---- */
+.admin-content {
+  padding: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.admin-content.hidden {
+  display: none;
+}
+
+/* ---- 统计卡片 ---- */
+.admin-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  flex: 1;
+  min-width: 80px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.stat-card .stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-card .stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ---- 操作栏 ---- */
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.admin-actions .btn-action {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-import {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-import:active {
+  background: var(--primary-dark);
+}
+
+.btn-add {
+  background: var(--accent);
+  color: var(--text);
+}
+
+.btn-add:active {
+  background: #d4b07a;
+}
+
+.admin-actions .admin-search {
+  flex: 1;
+  min-width: 150px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  background: var(--card-bg);
+  transition: border-color 0.2s;
+}
+
+.admin-actions .admin-search:focus {
+  border-color: var(--primary);
+}
+
+/* ---- 商品表格 ---- */
+.product-table-wrapper {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-table thead {
+  background: var(--bg);
+}
+
+.admin-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(248, 111, 82, 0.04);
+}
+
+.admin-table .col-id {
+  width: 100px;
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.admin-table .col-name {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-table .col-price {
+  width: 80px;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.admin-table .col-actions {
+  width: 120px;
+  white-space: nowrap;
+}
+
+/* ---- 状态标签 ---- */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-active {
+  background: rgba(76, 175, 80, 0.12);
+  color: var(--success);
+}
+
+.badge-inactive {
+  background: rgba(153, 153, 153, 0.15);
+  color: var(--text-secondary);
+}
+
+/* ---- 操作按钮 ---- */
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.btn-icon:active {
+  background: var(--bg);
+}
+
+.btn-icon-edit {
+  color: var(--primary);
+}
+
+.btn-icon-delete {
+  color: #e53935;
+}
+
+.btn-icon-toggle {
+  color: var(--text-secondary);
+}
+
+/* ---- 空状态 ---- */
+.admin-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.admin-empty .icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+/* ---- 加载态 ---- */
+.admin-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+/* ---- Excel 预览 ---- */
+.excel-preview {
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.excel-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.excel-preview th {
+  background: var(--bg);
+  padding: 6px 10px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+
+.excel-preview td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.excel-error-row {
+  background: rgba(229, 57, 53, 0.08);
+}
+
+.excel-error-msg {
+  color: #e53935;
+  font-size: 12px;
+}
+
+.excel-stats {
+  display: flex;
+  gap: 16px;
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.excel-stats .valid-count {
+  color: var(--success);
+}
+
+.excel-stats .error-count {
+  color: #e53935;
+}
+
+/* ---- 文件上传区 ---- */
+.file-upload-area {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.file-upload-area:hover {
+  border-color: var(--primary);
+  background: rgba(248, 111, 82, 0.03);
+}
+
+.file-upload-area input[type="file"] {
+  display: none;
+}
+
+.file-upload-area .upload-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.file-upload-area .upload-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.file-upload-area.has-file {
+  border-color: var(--success);
+  background: rgba(76, 175, 80, 0.05);
+}
+
+/* ---- Toast 提示 ---- */
+.toast {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 400;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ---- 响应式：桌面端 ---- */
+@media (min-width: 768px) {
+  .admin-topbar {
+    padding: 10px 24px;
+  }
+
+  .admin-content {
+    padding: 20px 24px;
+  }
+
+  .admin-stats {
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 28px;
+  }
+}
+
+/* ---- 响应式：移动端表格转卡片 ---- */
+@media (max-width: 767px) {
+  .admin-table thead {
+    display: none;
+  }
+
+  .admin-table tbody tr {
+    display: block;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .admin-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: none;
+  }
+
+  .admin-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+}

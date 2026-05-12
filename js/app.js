@@ -9,8 +9,8 @@ const CONFIG = {
   supabaseKey: window.__SUPABASE_ANON_KEY__ || 'YOUR_SUPABASE_ANON_KEY',
 };
 
-// ==================== 商品数据 ====================
-const PRODUCTS = [
+// ==================== 商品数据（硬编码兜底） ====================
+var HARDCODED_PRODUCTS = [
   // 彩妆
   { id: 'CZ0001', name: '焕彩修颜隔离霜', category: '彩妆', price: 128 },
   { id: 'CZ0002', name: '植萃润手霜', category: '彩妆', price: 68 },
@@ -154,7 +154,62 @@ const PRODUCTS = [
   { id: 'MM0016', name: '桑妮水光弹润面膜', category: '院线', price: 198 },
 ];
 
-// ==================== 状态 ====================
+// ==================== 动态商品数据（前台显示来源） ====================
+var PRODUCTS = [];
+
+/**
+ * 从 Supabase 加载商品数据
+ * 降级策略：Supabase → localStorage 缓存 → 硬编码兜底
+ */
+async function loadProductsFromSupabase() {
+  try {
+    var data = await SupabaseClient.restQuery('products', 'is_active=eq.true&order=id.asc');
+    if (data && data.length > 0) {
+      PRODUCTS = data.map(function (p) {
+        return {
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          price: parseFloat(p.price) || 0,
+        };
+      });
+      // 缓存到 localStorage
+      localStorage.setItem('products_cache', JSON.stringify(PRODUCTS));
+      return;
+    }
+  } catch (e) {
+    // 继续尝试缓存
+  }
+
+  // 降级：读 localStorage 缓存
+  var cached = localStorage.getItem('products_cache');
+  if (cached) {
+    try {
+      PRODUCTS = JSON.parse(cached);
+      return;
+    } catch (e) {
+      // 缓存损坏，继续兜底
+    }
+  }
+
+  // 最终兜底：硬编码数据
+  PRODUCTS = HARDCODED_PRODUCTS;
+}
+
+/**
+ * 获取分类列表（动态从商品数据中提取）
+ */
+function getCategories() {
+  var cats = ['全部'];
+  var seen = {};
+  PRODUCTS.forEach(function (p) {
+    if (!seen[p.category]) {
+      seen[p.category] = true;
+      cats.push(p.category);
+    }
+  });
+  return cats;
+}
 let state = {
   activeCategory: '全部',
   searchQuery: '',
@@ -218,7 +273,7 @@ function setCartQty(cart, id, qty) {
 // ==================== 渲染 ====================
 
 function renderTabs() {
-  const categories = ['全部', '彩妆', '护肤口服', '洗护', '周边', '院线'];
+  var categories = getCategories();
 
   // 移动端水平 Tab
   if (dom.tabBar) {
@@ -661,8 +716,17 @@ function showToast(msg) {
 
 // ==================== 初始化 ====================
 
-function init() {
+async function init() {
   cacheDom();
+
+  // 显示加载态
+  if (dom.productList) {
+    dom.productList.innerHTML = '<div class="admin-loading">商品加载中...</div>';
+  }
+
+  // 动态加载商品
+  await loadProductsFromSupabase();
+
   renderTabs();
   renderProducts();
   updateCheckout();
@@ -671,8 +735,14 @@ function init() {
   initSubmit();
   syncFormFields();
 
-  subscribeToOrders((newOrder) => {
-    showToast(`新出货单: ${newOrder.applicant}`);
+  // 实时同步：后台商品变更自动更新前台
+  SupabaseClient.wsSubscribe('products', function (record) {
+    // 收到变更，重新加载
+    loadProductsFromSupabase().then(function () {
+      renderTabs();
+      renderProducts();
+      updateCheckout();
+    });
   });
 }
 

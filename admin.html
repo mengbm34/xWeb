@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Cache-Control" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>商品管理后台</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <!-- 鉴权遮罩层 -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <h2>商品管理后台</h2>
+      <div class="form-group">
+        <label for="authPassword">请输入管理密码</label>
+        <input type="password" id="authPassword" placeholder="请输入密码" autocomplete="off">
+      </div>
+      <button class="btn-auth" id="btnAuth">进入管理</button>
+    </div>
+  </div>
+
+  <!-- 主内容（鉴权后显示） -->
+  <div class="admin-content hidden" id="adminContent">
+    <!-- 顶栏 -->
+    <header class="admin-topbar">
+      <h1>商品管理后台</h1>
+      <button class="btn-logout" id="btnAdminLogout">退出</button>
+    </header>
+
+    <!-- 统计卡片 -->
+    <div class="admin-stats" id="adminStats"></div>
+
+    <!-- 操作栏 -->
+    <div class="admin-actions">
+      <button class="btn-action btn-import" id="btnExcelImport">Excel导入</button>
+      <button class="btn-action btn-add" id="btnManualAdd">手动添加</button>
+      <input type="text" class="admin-search" id="adminSearch" placeholder="搜索商品名称或编码..." autocomplete="off">
+    </div>
+
+    <!-- 商品表格 -->
+    <div class="product-table-wrapper" id="productTableWrapper">
+      <div class="admin-loading" id="adminLoading">加载中...</div>
+    </div>
+  </div>
+
+  <!-- 添加/编辑弹窗 -->
+  <div class="modal-overlay" id="addEditOverlay">
+    <div class="modal">
+      <h2 class="modal-title" id="addEditTitle">添加商品</h2>
+      <form id="addEditForm" autocomplete="off">
+        <input type="hidden" id="editOriginalId">
+        <div class="admin-form-group">
+          <label class="admin-modal-label">商品编码 <span class="required">*必填</span></label>
+          <input type="text" class="admin-modal-input" id="formId" placeholder="例如: CZ0025" maxlength="20" required>
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-modal-label">商品名称 <span class="required">*必填</span></label>
+          <input type="text" class="admin-modal-input" id="formName" placeholder="商品名称" maxlength="100" required>
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-modal-label">分类 <span class="required">*必填</span></label>
+          <select class="admin-modal-select" id="formCategory" required>
+            <option value="">请选择分类</option>
+            <option value="彩妆">彩妆</option>
+            <option value="护肤口服">护肤口服</option>
+            <option value="洗护">洗护</option>
+            <option value="周边">周边</option>
+            <option value="院线">院线</option>
+          </select>
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-modal-label">价格</label>
+          <input type="number" class="admin-modal-input" id="formPrice" placeholder="0.00" step="0.01" min="0" value="0">
+        </div>
+      </form>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btnAddEditCancel">取消</button>
+        <button class="btn-submit" id="btnAddEditSubmit">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Excel导入弹窗 -->
+  <div class="modal-overlay" id="excelOverlay">
+    <div class="modal" style="max-width: 600px;">
+      <h2 class="modal-title">Excel导入商品</h2>
+
+      <!-- 文件上传区 -->
+      <div class="file-upload-area" id="fileUploadArea">
+        <div class="upload-text">点击或拖拽上传 Excel 文件</div>
+        <div class="upload-hint">支持 .xlsx / .xls 格式</div>
+        <input type="file" id="excelFileInput" accept=".xlsx,.xls">
+      </div>
+
+      <!-- 解析预览 -->
+      <div id="excelPreviewContainer" style="display:none;">
+        <div class="excel-stats" id="excelStats"></div>
+        <div class="excel-preview" id="excelPreview"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btnExcelCancel">取消</button>
+        <button class="btn-submit" id="btnExcelConfirm" disabled>确认导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 提示 -->
+  <div class="toast" id="adminToast"></div>
+
+  <!-- 脚本：顺序很重要 -->
+  <script src="js/supabase-client.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
