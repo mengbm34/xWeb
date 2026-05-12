@@ -159,9 +159,31 @@ var PRODUCTS = [];
 
 /**
  * 从 Supabase 加载商品数据
- * 降级策略：Supabase → localStorage 缓存 → 硬编码兜底
+ * 策略：先读 localStorage 缓存秒开 → 异步刷新 Supabase → 硬编码兜底
  */
 async function loadProductsFromSupabase() {
+  var cached = localStorage.getItem('products_cache');
+  if (cached) {
+    try {
+      PRODUCTS = JSON.parse(cached);
+      renderTabs();
+      renderProducts();
+      updateCheckout();
+    } catch (e) {
+      // 缓存损坏，继续
+    }
+  }
+
+  if (!CONFIG.supabaseUrl || CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') {
+    if (PRODUCTS.length === 0) {
+      PRODUCTS = HARDCODED_PRODUCTS;
+      renderTabs();
+      renderProducts();
+      updateCheckout();
+    }
+    return;
+  }
+
   try {
     var data = await SupabaseClient.restQuery('products', 'is_active=eq.true&order=id.asc');
     if (data && data.length > 0) {
@@ -173,27 +195,24 @@ async function loadProductsFromSupabase() {
           price: parseFloat(p.price) || 0,
         };
       });
-      // 缓存到 localStorage
       localStorage.setItem('products_cache', JSON.stringify(PRODUCTS));
-      return;
+      renderTabs();
+      renderProducts();
+      updateCheckout();
+    } else if (PRODUCTS.length === 0) {
+      PRODUCTS = HARDCODED_PRODUCTS;
+      renderTabs();
+      renderProducts();
+      updateCheckout();
     }
   } catch (e) {
-    // 继续尝试缓存
-  }
-
-  // 降级：读 localStorage 缓存
-  var cached = localStorage.getItem('products_cache');
-  if (cached) {
-    try {
-      PRODUCTS = JSON.parse(cached);
-      return;
-    } catch (e) {
-      // 缓存损坏，继续兜底
+    if (PRODUCTS.length === 0) {
+      PRODUCTS = HARDCODED_PRODUCTS;
+      renderTabs();
+      renderProducts();
+      updateCheckout();
     }
   }
-
-  // 最终兜底：硬编码数据
-  PRODUCTS = HARDCODED_PRODUCTS;
 }
 
 /**
@@ -238,8 +257,8 @@ function cacheDom() {
   dom.inputRemarkDesktop = document.getElementById('inputRemarkDesktop');
   dom.modalOverlay = document.getElementById('modalOverlay');
   dom.orderItems = document.getElementById('orderItems');
-  dom.inputName = document.getElementById('inputName');
-  dom.inputRemark = document.getElementById('inputRemark');
+  dom.inputName = document.getElementById('modalInputName');
+  dom.inputRemark = document.getElementById('modalInputRemark');
   dom.btnCancel = document.getElementById('btnCancel');
   dom.btnSubmitOrder = document.getElementById('btnSubmitOrder');
   dom.toast = document.getElementById('toast');
@@ -477,11 +496,8 @@ function initSearch() {
 // ==================== 结算弹窗 ====================
 
 function openCheckoutModal() {
-  // 从常驻表单同步值到弹窗
-  const activeName = dom.inputNameDesktop ? dom.inputNameDesktop.value : dom.inputName.value;
-  const activeRemark = dom.inputRemarkDesktop ? dom.inputRemarkDesktop.value : dom.inputRemark.value;
-  dom.inputName.value = activeName || '';
-  dom.inputRemark.value = activeRemark || '';
+  dom.inputName.value = '';
+  dom.inputRemark.value = '';
 
   const items = Object.entries(state.cart).map(([id, qty]) => {
     const product = PRODUCTS.find(p => p.id === id);
@@ -502,9 +518,6 @@ function openCheckoutModal() {
 }
 
 function closeCheckoutModal() {
-  // 从弹窗同步值回常驻表单
-  if (dom.inputNameDesktop) dom.inputNameDesktop.value = dom.inputName.value;
-  if (dom.inputRemarkDesktop) dom.inputRemarkDesktop.value = dom.inputRemark.value;
   dom.modalOverlay.classList.remove('show');
 }
 
@@ -578,7 +591,7 @@ async function submitOrder() {
 
   try {
     await saveToSupabase(order);
-    showToast('出货单提交成功！');
+    showToast('出库申请提交成功！');
     closeCheckoutModal();
     state.cart = {};
     updateCheckout();
@@ -609,23 +622,30 @@ async function saveToSupabase(order) {
     return;
   }
 
-  const response = await fetch(`${CONFIG.supabaseUrl}/rest/v1/outbound_orders`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': CONFIG.supabaseKey,
-      'Authorization': `Bearer ${CONFIG.supabaseKey}`,
-      'Prefer': 'return=representation',
-    },
-    body: JSON.stringify(order),
-  });
+  try {
+    const response = await fetch(`${CONFIG.supabaseUrl}/rest/v1/outbound_orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': CONFIG.supabaseKey,
+        'Authorization': `Bearer ${CONFIG.supabaseKey}`,
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify(order),
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || `HTTP ${response.status}`);
+    if (!response.ok) {
+      const error = await response.json();
+      console.warn('Supabase 保存失败，降级到 localStorage:', error.message);
+      saveToLocalStorage(order);
+      return;
+    }
+
+    return response.json();
+  } catch (err) {
+    console.warn('Supabase 网络异常，降级到 localStorage:', err.message);
+    saveToLocalStorage(order);
   }
-
-  return response.json();
 }
 
 function saveToLocalStorage(order) {
@@ -718,52 +738,17 @@ function showToast(msg) {
 
 async function init() {
   cacheDom();
-
-  // 显示加载态
-  if (dom.productList) {
-    dom.productList.innerHTML = '<div class="admin-loading">商品加载中...</div>';
-  }
-
-  // 动态加载商品
-  await loadProductsFromSupabase();
-
-  renderTabs();
-  renderProducts();
-  updateCheckout();
   initSearch();
   initModal();
   initSubmit();
-  syncFormFields();
+
+  // 先渲染缓存，异步刷新远程数据
+  loadProductsFromSupabase();
 
   // 实时同步：后台商品变更自动更新前台
   SupabaseClient.wsSubscribe('products', function (record) {
-    // 收到变更，重新加载
-    loadProductsFromSupabase().then(function () {
-      renderTabs();
-      renderProducts();
-      updateCheckout();
-    });
+    loadProductsFromSupabase();
   });
-}
-
-// 同步移动端和桌面端表单字段
-function syncFormFields() {
-  if (dom.inputNameDesktop && dom.inputName) {
-    dom.inputNameDesktop.addEventListener('input', () => {
-      dom.inputName.value = dom.inputNameDesktop.value;
-    });
-    dom.inputName.addEventListener('input', () => {
-      dom.inputNameDesktop.value = dom.inputName.value;
-    });
-  }
-  if (dom.inputRemarkDesktop && dom.inputRemark) {
-    dom.inputRemarkDesktop.addEventListener('input', () => {
-      dom.inputRemark.value = dom.inputRemarkDesktop.value;
-    });
-    dom.inputRemark.addEventListener('input', () => {
-      dom.inputRemarkDesktop.value = dom.inputRemark.value;
-    });
-  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -29,41 +29,89 @@
     <!-- 顶栏 -->
     <header class="admin-topbar">
       <h1>商品管理后台</h1>
+      <nav class="admin-tabs">
+        <button class="admin-tab active" data-tab="products">商品管理</button>
+        <button class="admin-tab" data-tab="orders">出库记录</button>
+      </nav>
       <button class="btn-logout" id="btnAdminLogout">退出</button>
     </header>
 
-    <!-- 统计卡片 -->
-    <div class="admin-stats" id="adminStats"></div>
+    <!-- 商品管理 Tab -->
+    <div class="admin-tab-panel active" id="productsTab">
+      <!-- 统计卡片 -->
+      <div class="admin-stats" id="adminStats"></div>
 
-    <!-- 操作栏 -->
-    <div class="admin-actions">
-      <button class="btn-action btn-import" id="btnExcelImport">Excel导入</button>
-      <button class="btn-action btn-add" id="btnManualAdd">手动添加</button>
-      <input type="text" class="admin-search" id="adminSearch" placeholder="搜索商品名称或编码..." autocomplete="off">
+      <!-- 操作栏 -->
+      <div class="admin-actions">
+        <button class="btn-action btn-import" id="btnExcelImport">Excel导入</button>
+        <button class="btn-action btn-add" id="btnManualAdd">手动添加</button>
+        <input type="text" class="admin-search" id="adminSearch" placeholder="搜索商品名称或编码..." autocomplete="off">
+      </div>
+
+      <!-- 批量操作栏 -->
+      <div class="bulk-bar" id="bulkBar">
+        <span class="bulk-count" id="bulkCount">已选择 0 项</span>
+        <button class="btn-action btn-bulk-delete" id="btnBulkDelete">批量删除</button>
+        <button class="btn-action btn-bulk-cancel" id="btnBulkCancel">取消选择</button>
+      </div>
+
+      <!-- 商品表格 -->
+      <div class="product-table-wrapper" id="productTableWrapper">
+        <div class="admin-loading" id="adminLoading">加载中...</div>
+      </div>
     </div>
 
-    <!-- 商品表格 -->
-    <div class="product-table-wrapper" id="productTableWrapper">
-      <div class="admin-loading" id="adminLoading">加载中...</div>
+    <!-- 出库记录 Tab -->
+    <div class="admin-tab-panel" id="ordersTab">
+      <div class="admin-actions">
+        <button class="btn-action" id="btnRefreshOrders">刷新</button>
+        <input type="text" class="admin-search" id="ordersSearch" placeholder="搜索申请人或原因..." autocomplete="off">
+      </div>
+
+      <!-- 出库记录批量操作栏 -->
+      <div class="bulk-bar" id="ordersBulkBar">
+        <span class="bulk-count" id="ordersBulkCount">已选择 0 条记录</span>
+        <button class="btn-action btn-bulk-delete" id="btnOrdersBulkDelete">批量删除</button>
+        <button class="btn-action btn-bulk-cancel" id="btnOrdersBulkCancel">取消选择</button>
+      </div>
+
+      <div class="order-table-wrapper" id="orderTableWrapper">
+        <div class="admin-loading">加载出库记录中...</div>
+      </div>
     </div>
   </div>
 
   <!-- 添加/编辑弹窗 -->
   <div class="modal-overlay" id="addEditOverlay">
-    <div class="modal">
-      <h2 class="modal-title" id="addEditTitle">添加商品</h2>
+    <div class="modal modal-add-edit">
+      <div class="modal-header">
+        <h2 class="modal-title" id="addEditTitle">添加商品</h2>
+        <button class="modal-close" id="btnAddEditClose">&times;</button>
+      </div>
       <form id="addEditForm" autocomplete="off">
         <input type="hidden" id="editOriginalId">
         <div class="admin-form-group">
-          <label class="admin-modal-label">商品编码 <span class="required">*必填</span></label>
+          <label class="admin-modal-label">
+            <span class="label-icon">🏷️</span>
+            商品编码
+            <span class="label-required">*</span>
+          </label>
           <input type="text" class="admin-modal-input" id="formId" placeholder="例如: CZ0025" maxlength="20" required>
         </div>
         <div class="admin-form-group">
-          <label class="admin-modal-label">商品名称 <span class="required">*必填</span></label>
-          <input type="text" class="admin-modal-input" id="formName" placeholder="商品名称" maxlength="100" required>
+          <label class="admin-modal-label">
+            <span class="label-icon">📝</span>
+            商品名称
+            <span class="label-required">*</span>
+          </label>
+          <input type="text" class="admin-modal-input" id="formName" placeholder="请输入商品名称" maxlength="100" required>
         </div>
         <div class="admin-form-group">
-          <label class="admin-modal-label">分类 <span class="required">*必填</span></label>
+          <label class="admin-modal-label">
+            <span class="label-icon">📂</span>
+            分类
+            <span class="label-required">*</span>
+          </label>
           <select class="admin-modal-select" id="formCategory" required>
             <option value="">请选择分类</option>
             <option value="彩妆">彩妆</option>
@@ -74,8 +122,14 @@
           </select>
         </div>
         <div class="admin-form-group">
-          <label class="admin-modal-label">价格</label>
-          <input type="number" class="admin-modal-input" id="formPrice" placeholder="0.00" step="0.01" min="0" value="0">
+          <label class="admin-modal-label">
+            <span class="label-icon">💰</span>
+            价格
+          </label>
+          <div class="input-with-prefix">
+            <span class="input-prefix">¥</span>
+            <input type="number" class="admin-modal-input input-with-prefix" id="formPrice" placeholder="0.00" step="0.01" min="0" value="0">
+          </div>
         </div>
       </form>
       <div class="modal-actions">

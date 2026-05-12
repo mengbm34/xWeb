@@ -19,6 +19,12 @@ var adminState = {
   excelData: [],
   excelErrors: [],
   searchQuery: '',
+  selectedIds: [],
+  orders: [],
+  filteredOrders: [],
+  ordersSearchQuery: '',
+  selectedOrderIds: [],
+  activeTab: 'products',
 };
 
 // ==================== DOM 缓存 ====================
@@ -54,6 +60,16 @@ function cacheDom() {
   dom.btnExcelCancel = document.getElementById('btnExcelCancel');
   dom.btnExcelConfirm = document.getElementById('btnExcelConfirm');
   dom.toast = document.getElementById('adminToast');
+  dom.btnRefreshOrders = document.getElementById('btnRefreshOrders');
+  dom.ordersSearch = document.getElementById('ordersSearch');
+  dom.orderTableWrapper = document.getElementById('orderTableWrapper');
+  dom.bulkBar = document.getElementById('bulkBar');
+  dom.bulkCount = document.getElementById('bulkCount');
+  dom.btnBulkDelete = document.getElementById('btnBulkDelete');
+  dom.ordersBulkBar = document.getElementById('ordersBulkBar');
+  dom.ordersBulkCount = document.getElementById('ordersBulkCount');
+  dom.btnOrdersBulkDelete = document.getElementById('btnOrdersBulkDelete');
+  dom.btnOrdersBulkCancel = document.getElementById('btnOrdersBulkCancel');
 }
 
 // ==================== 工具函数 ====================
@@ -114,31 +130,39 @@ function tryAuth() {
 // ==================== 商品加载 ====================
 
 async function loadProducts() {
-  showLoading();
+  // 先读缓存，秒开页面
+  var cached = localStorage.getItem('products_cache');
+  if (cached) {
+    try {
+      adminState.products = JSON.parse(cached);
+      applyFilter();
+    } catch (e) {
+      // 缓存损坏，继续
+    }
+  }
+
+  // 异步刷新远程数据
   try {
     var products = await SupabaseClient.restQuery('products', 'order=id.asc');
-    adminState.products = products.map(function (p) {
-      return {
-        id: p.id,
-        name: p.name,
-        category: p.category,
-        price: parseFloat(p.price) || 0,
-        is_active: p.is_active !== false,
-      };
-    });
-    localStorage.setItem('products_cache', JSON.stringify(adminState.products));
+    if (products && products.length > 0) {
+      adminState.products = products.map(function (p) {
+        return {
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          price: parseFloat(p.price) || 0,
+          is_active: p.is_active !== false,
+        };
+      });
+      localStorage.setItem('products_cache', JSON.stringify(adminState.products));
+    }
   } catch (e) {
-    var cached = localStorage.getItem('products_cache');
-    if (cached) {
-      adminState.products = JSON.parse(cached);
-      showToast('使用本地缓存数据');
-    } else {
-      adminState.products = [];
-      showToast('加载失败：' + e.message);
+    // 保持缓存数据不动
+    if (adminState.products.length === 0) {
+      showToast('加载失败，请检查网络');
     }
   }
   applyFilter();
-  hideLoading();
 }
 
 function showLoading() {
@@ -174,11 +198,14 @@ function renderProductTable() {
 
   var html = '<table class="admin-table">';
   html += '<thead><tr>';
+  html += '<th style="width:40px"><input type="checkbox" id="selectAllCheckbox" title="全选"></th>';
   html += '<th>商品编码</th><th>商品名称</th><th>分类</th><th>价格</th><th>状态</th><th>操作</th>';
   html += '</tr></thead><tbody>';
 
   products.forEach(function (p) {
+    var checked = adminState.selectedIds.indexOf(p.id) !== -1 ? ' checked' : '';
     html += '<tr>';
+    html += '<td style="width:40px"><input type="checkbox" class="row-checkbox" data-id="' + escapeHtml(p.id) + '"' + checked + '></td>';
     html += '<td class="col-id" data-label="编码">' + escapeHtml(p.id) + '</td>';
     html += '<td class="col-name" data-label="名称" title="' + escapeHtml(p.name) + '">' + escapeHtml(p.name) + '</td>';
     html += '<td data-label="分类">' + escapeHtml(p.category) + '</td>';
@@ -194,6 +221,38 @@ function renderProductTable() {
 
   html += '</tbody></table>';
   dom.productTableWrapper.innerHTML = html;
+
+  bindProductTableEvents();
+  updateSelectionUI();
+}
+
+function bindProductTableEvents() {
+  var selectAll = document.getElementById('selectAllCheckbox');
+  if (selectAll) {
+    selectAll.checked = adminState.selectedIds.length > 0 && adminState.selectedIds.length === adminState.filteredProducts.length;
+    selectAll.addEventListener('change', function () {
+      if (selectAll.checked) {
+        adminState.selectedIds = adminState.filteredProducts.map(function (p) { return p.id; });
+      } else {
+        adminState.selectedIds = [];
+      }
+      renderProductTable();
+    });
+  }
+
+  dom.productTableWrapper.querySelectorAll('.row-checkbox').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      var id = cb.dataset.id;
+      if (cb.checked) {
+        if (adminState.selectedIds.indexOf(id) === -1) {
+          adminState.selectedIds.push(id);
+        }
+      } else {
+        adminState.selectedIds = adminState.selectedIds.filter(function (sid) { return sid !== id; });
+      }
+      updateSelectionUI();
+    });
+  });
 
   dom.productTableWrapper.querySelectorAll('.btn-icon').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -292,6 +351,35 @@ async function handleToggle(id) {
     await loadProducts();
   } catch (e) {
     showToast('操作失败：' + e.message);
+  }
+}
+
+// ==================== 批量选择 & 删除 ====================
+
+function updateSelectionUI() {
+  var count = adminState.selectedIds.length;
+  if (count > 0) {
+    dom.bulkBar.classList.add('show');
+    dom.bulkCount.textContent = '已选择 ' + count + ' 项';
+  } else {
+    dom.bulkBar.classList.remove('show');
+  }
+}
+
+async function handleBulkDelete() {
+  var count = adminState.selectedIds.length;
+  if (count === 0) return;
+  if (!confirm('确认删除选中的 ' + count + ' 个商品？')) return;
+
+  try {
+    for (var i = 0; i < adminState.selectedIds.length; i++) {
+      await SupabaseClient.restDelete('products', adminState.selectedIds[i]);
+    }
+    adminState.selectedIds = [];
+    showToast('已删除 ' + count + ' 个商品');
+    await loadProducts();
+  } catch (e) {
+    showToast('批量删除失败：' + e.message);
   }
 }
 
@@ -478,6 +566,190 @@ function subscribeToProducts() {
   });
 }
 
+// ==================== Tab 切换 ====================
+
+function switchTab(tabName) {
+  adminState.activeTab = tabName;
+  document.querySelectorAll('.admin-tab').forEach(function (btn) {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  });
+  document.querySelectorAll('.admin-tab-panel').forEach(function (panel) {
+    panel.classList.toggle('active', panel.id === tabName + 'Tab');
+  });
+  if (tabName === 'orders') {
+    loadOrders();
+  }
+}
+
+// ==================== 出库记录 ====================
+
+async function loadOrders() {
+  dom.orderTableWrapper.innerHTML = '<div class="admin-loading">加载出库记录中...</div>';
+  try {
+    var orders = await SupabaseClient.restQuery('outbound_orders', 'order=created_at.desc&limit=200');
+    if (!orders || orders.length === 0) {
+      // 降级：读 localStorage
+      orders = JSON.parse(localStorage.getItem('outbound_orders') || '[]');
+    }
+    adminState.orders = orders;
+  } catch (e) {
+    adminState.orders = JSON.parse(localStorage.getItem('outbound_orders') || '[]');
+  }
+  applyOrderFilter();
+}
+
+function applyOrderFilter() {
+  var query = adminState.ordersSearchQuery.toLowerCase();
+  if (!query) {
+    adminState.filteredOrders = adminState.orders.slice();
+  } else {
+    adminState.filteredOrders = adminState.orders.filter(function (o) {
+      return (o.applicant && o.applicant.toLowerCase().indexOf(query) !== -1) ||
+             (o.remark && o.remark.toLowerCase().indexOf(query) !== -1);
+    });
+  }
+  renderOrders();
+}
+
+function renderOrders() {
+  var orders = adminState.filteredOrders;
+
+  if (orders.length === 0) {
+    dom.orderTableWrapper.innerHTML =
+      '<div class="admin-empty"><div class="icon">📋</div><p>暂无出库记录</p></div>';
+    updateOrdersSelectionUI();
+    return;
+  }
+
+  var html = '<table class="admin-table">';
+  html += '<thead><tr>';
+  html += '<th style="width:40px"><input type="checkbox" id="selectAllOrderCheckbox" title="全选"></th>';
+  html += '<th>申请人</th><th>出库原因</th><th>商品明细</th><th>总金额</th><th>数量</th><th>状态</th><th>申请时间</th><th>操作</th>';
+  html += '</tr></thead><tbody>';
+
+  orders.forEach(function (o, index) {
+    var checked = adminState.selectedOrderIds.indexOf(o.id) !== -1 ? ' checked' : '';
+    var itemsPreview = o.items ? o.items.slice(0, 2).map(function (item) {
+      return item.productName + ' x' + item.qty;
+    }).join('、') : '';
+    if (o.items && o.items.length > 2) itemsPreview += ' 等' + o.items.length + '项';
+
+    var statusLabel = o.status === 'approved' ? '已批准' : o.status === 'rejected' ? '已驳回' : '待审批';
+    var statusClass = o.status === 'approved' ? 'badge-active' : o.status === 'rejected' ? 'badge-inactive' : '';
+
+    html += '<tr>';
+    html += '<td style="width:40px"><input type="checkbox" class="order-row-checkbox" data-id="' + o.id + '"' + checked + '></td>';
+    html += '<td class="col-applicant" data-label="申请人">' + escapeHtml(o.applicant || '-') + '</td>';
+    html += '<td class="col-reason" data-label="原因" title="' + escapeHtml(o.remark || '') + '">' + escapeHtml(o.remark || '-') + '</td>';
+    html += '<td class="col-items-detail" data-label="商品">' + escapeHtml(itemsPreview) + '</td>';
+    html += '<td data-label="总金额" class="col-price">¥' + (o.totalAmount || 0).toFixed(2) + '</td>';
+    html += '<td data-label="数量">' + (o.totalQty || 0) + '</td>';
+    html += '<td data-label="状态"><span class="badge ' + statusClass + '">' + statusLabel + '</span></td>';
+    html += '<td class="col-time" data-label="时间">' + formatDateTime(o.createdAt) + '</td>';
+    html += '<td data-label="">';
+    html += '<button class="btn-icon order-detail-toggle" data-index="' + index + '" title="查看详情">详情</button>';
+    html += '</td>';
+    html += '</tr>';
+
+    // 展开的详情行
+    if (o.items) {
+      html += '<tr class="order-detail-row" data-index="' + index + '">';
+      html += '<td colspan="9">';
+      html += '<strong>完整明细：</strong>';
+      o.items.forEach(function (item) {
+        html += '<span class="order-detail-item">' + escapeHtml(item.productName) + ' x' + item.qty + ' ¥' + (item.subtotal || item.price * item.qty).toFixed(2) + '</span>';
+      });
+      html += '</td></tr>';
+    }
+  });
+
+  html += '</tbody></table>';
+  dom.orderTableWrapper.innerHTML = html;
+
+  // 绑定详情展开
+  dom.orderTableWrapper.querySelectorAll('.order-detail-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var idx = btn.dataset.index;
+      var detailRow = dom.orderTableWrapper.querySelector('.order-detail-row[data-index="' + idx + '"]');
+      if (detailRow) {
+        detailRow.classList.toggle('expanded');
+        btn.textContent = detailRow.classList.contains('expanded') ? '收起' : '详情';
+      }
+    });
+  });
+
+  // 绑定订单复选框
+  bindOrderSelectionEvents();
+  updateOrdersSelectionUI();
+}
+
+function formatDateTime(iso) {
+  if (!iso) return '-';
+  var d = new Date(iso);
+  var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+// ==================== 出库记录批量选择 & 删除 ====================
+
+function bindOrderSelectionEvents() {
+  var selectAll = document.getElementById('selectAllOrderCheckbox');
+  if (selectAll) {
+    selectAll.checked = adminState.selectedOrderIds.length > 0 && adminState.selectedOrderIds.length === adminState.filteredOrders.length;
+    selectAll.addEventListener('change', function () {
+      if (selectAll.checked) {
+        adminState.selectedOrderIds = adminState.filteredOrders.map(function (o) { return o.id; });
+      } else {
+        adminState.selectedOrderIds = [];
+      }
+      renderOrders();
+    });
+  }
+
+  dom.orderTableWrapper.querySelectorAll('.order-row-checkbox').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      var id = cb.dataset.id;
+      if (cb.checked) {
+        if (adminState.selectedOrderIds.indexOf(id) === -1) {
+          adminState.selectedOrderIds.push(id);
+        }
+      } else {
+        adminState.selectedOrderIds = adminState.selectedOrderIds.filter(function (sid) { return sid !== id; });
+      }
+      updateOrdersSelectionUI();
+    });
+  });
+}
+
+function updateOrdersSelectionUI() {
+  var count = adminState.selectedOrderIds.length;
+  if (dom.ordersBulkBar) {
+    if (count > 0) {
+      dom.ordersBulkBar.classList.add('show');
+      dom.ordersBulkCount.textContent = '已选择 ' + count + ' 条记录';
+    } else {
+      dom.ordersBulkBar.classList.remove('show');
+    }
+  }
+}
+
+async function handleOrdersBulkDelete() {
+  var count = adminState.selectedOrderIds.length;
+  if (count === 0) return;
+  if (!confirm('确认删除选中的 ' + count + ' 条出库记录？')) return;
+
+  try {
+    for (var i = 0; i < adminState.selectedOrderIds.length; i++) {
+      await SupabaseClient.restDelete('outbound_orders', adminState.selectedOrderIds[i]);
+    }
+    adminState.selectedOrderIds = [];
+    showToast('已删除 ' + count + ' 条出库记录');
+    await loadOrders();
+  } catch (e) {
+    showToast('批量删除失败：' + e.message);
+  }
+}
+
 // ==================== 初始化 ====================
 
 function init() {
@@ -500,6 +772,9 @@ function init() {
   dom.addEditOverlay.addEventListener('click', function (e) {
     if (e.target === dom.addEditOverlay) closeAddEditModal();
   });
+  if (document.getElementById('btnAddEditClose')) {
+    document.getElementById('btnAddEditClose').addEventListener('click', closeAddEditModal);
+  }
 
   dom.btnExcelCancel.addEventListener('click', closeExcelModal);
   dom.btnExcelConfirm.addEventListener('click', confirmExcelImport);
@@ -528,6 +803,58 @@ function init() {
       handleFileSelect({ target: { files: files } });
     }
   });
+
+  // Tab 切换
+  document.querySelectorAll('.admin-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      switchTab(btn.dataset.tab);
+    });
+  });
+
+  // 出库记录搜索
+  if (dom.ordersSearch) {
+    var orderTimer = null;
+    dom.ordersSearch.addEventListener('input', function () {
+      clearTimeout(orderTimer);
+      orderTimer = setTimeout(function () {
+        adminState.ordersSearchQuery = dom.ordersSearch.value.trim();
+        applyOrderFilter();
+      }, 200);
+    });
+  }
+
+  // 刷新出库记录
+  if (dom.btnRefreshOrders) {
+    dom.btnRefreshOrders.addEventListener('click', function () {
+      loadOrders();
+    });
+  }
+
+  // 批量删除
+  if (dom.btnBulkDelete) {
+    dom.btnBulkDelete.addEventListener('click', handleBulkDelete);
+  }
+
+  // 取消选择
+  if (dom.btnBulkCancel) {
+    dom.btnBulkCancel.addEventListener('click', function () {
+      adminState.selectedIds = [];
+      renderProductTable();
+    });
+  }
+
+  // 出库记录批量删除
+  if (dom.btnOrdersBulkDelete) {
+    dom.btnOrdersBulkDelete.addEventListener('click', handleOrdersBulkDelete);
+  }
+
+  // 出库记录取消选择
+  if (dom.btnOrdersBulkCancel) {
+    dom.btnOrdersBulkCancel.addEventListener('click', function () {
+      adminState.selectedOrderIds = [];
+      renderOrders();
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

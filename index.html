@@ -13,10 +13,11 @@
 
   <!-- 顶部栏 -->
   <header class="topbar">
-    <h1>出库商品</h1>
-    <a href="admin.html" class="btn-logout" target="_blank">管理</a>
-    <div class="topbar-search">
-      <input type="text" id="searchInline" placeholder="搜索商品名称或编码..." autocomplete="off">
+    <div class="topbar-inner">
+      <h1>出库商品</h1>
+      <div class="topbar-search">
+        <input type="text" id="searchInline" placeholder="搜索商品名称或编码..." autocomplete="off">
+      </div>
     </div>
   </header>
 
@@ -41,20 +42,10 @@
     <aside class="cart-summary desktop-only" id="cartSummary">
       <h3>已选商品</h3>
       <div class="cart-items" id="cartItems"></div>
-      <div class="cart-form">
-        <div class="cart-form-group">
-          <label>申请人 <span class="required">*必填</span></label>
-          <input type="text" id="inputNameDesktop" class="cart-input" placeholder="请输入申请人姓名" maxlength="50" required>
-        </div>
-        <div class="cart-form-group">
-          <label>出库原因 <span class="required">*必填</span></label>
-          <textarea id="inputRemarkDesktop" class="cart-input cart-textarea" placeholder="请输入出库原因" maxlength="500" required></textarea>
-        </div>
-      </div>
       <div class="cart-footer">
         <div class="cart-total" id="cartTotal">¥0.00</div>
         <div class="cart-count" id="cartCount">已选 0 种，共 0 件</div>
-        <button class="btn-checkout" id="btnCheckoutDesktop" disabled>去结算</button>
+        <button class="btn-checkout" id="btnCheckoutDesktop" disabled>申请出库</button>
       </div>
     </aside>
   </div>
@@ -66,39 +57,35 @@
 
   <!-- 移动端底部结算栏 -->
   <div class="checkout-bar mobile-only">
-    <div class="checkout-form">
-      <input type="text" id="inputName" class="checkout-input" placeholder="申请人姓名 *" maxlength="50" required>
-      <input type="text" id="inputRemark" class="checkout-input" placeholder="出库原因 *" maxlength="500" required>
-    </div>
     <div class="checkout-footer">
       <div class="checkout-info">
         <div class="checkout-total" id="checkoutTotal">¥0.00</div>
         <div class="checkout-count" id="checkoutCount">已选 0 种，共 0 件</div>
       </div>
-      <button class="btn-checkout" id="btnCheckout" disabled>去结算</button>
+      <button class="btn-checkout" id="btnCheckout" disabled>申请出库</button>
     </div>
   </div>
 
   <!-- 结算弹窗 -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
-      <h2 class="modal-title">提交出货单</h2>
+      <h2 class="modal-title">申请出库</h2>
       <div class="modal-form">
         <!-- 已选商品明细 -->
         <div class="order-items" id="orderItems"></div>
 
         <div class="form-group">
           <label>申请人 <span class="required">*必填</span></label>
-          <input type="text" id="inputName" placeholder="请输入申请人姓名" maxlength="50" required>
+          <input type="text" id="modalInputName" placeholder="请输入申请人姓名" maxlength="50" required>
         </div>
         <div class="form-group">
           <label>出库原因 <span class="required">*必填</span></label>
-          <textarea id="inputRemark" placeholder="请输入出库原因" maxlength="500" required></textarea>
+          <textarea id="modalInputRemark" placeholder="请输入出库原因" maxlength="500" required></textarea>
         </div>
       </div>
       <div class="modal-actions">
         <button class="btn-cancel" id="btnCancel">取消</button>
-        <button class="btn-submit" id="btnSubmitOrder"><span class="btn-text">提交出货单</span><span class="btn-spinner" aria-hidden="true"></span></button>
+        <button class="btn-submit" id="btnSubmitOrder"><span class="btn-text">确认申请</span><span class="btn-spinner" aria-hidden="true"></span></button>
       </div>
     </div>
   </div>

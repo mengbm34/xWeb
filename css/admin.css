@@ -115,6 +115,42 @@ body {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* ---- Tab 切换 ---- */
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-tab {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-tab.active {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
+.admin-tab:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---- Tab 面板 ---- */
+.admin-tab-panel {
+  display: none;
+}
+
+.admin-tab-panel.active {
+  display: block;
+}
+
 /* ---- 主内容容器 ---- */
 .admin-content {
   padding: 16px;
@@ -453,6 +489,282 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
+/* ---- 批量操作栏 ---- */
+.bulk-bar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, rgba(229, 57, 53, 0.06) 0%, rgba(229, 57, 53, 0.02) 100%);
+  border: 1.5px solid rgba(229, 57, 53, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(229, 57, 53, 0.08);
+  animation: bulkBarSlide 0.25s ease;
+}
+
+@keyframes bulkBarSlide {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bulk-bar.show {
+  display: flex;
+}
+
+.bulk-bar .bulk-count {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e53935;
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bulk-bar .bulk-count::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e53935;
+  display: inline-block;
+  animation: pulse 1.5s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.btn-bulk-delete {
+  background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(229, 57, 53, 0.3);
+  white-space: nowrap;
+}
+
+.btn-bulk-delete:hover {
+  box-shadow: 0 4px 16px rgba(229, 57, 53, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-bulk-delete:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(229, 57, 53, 0.2);
+}
+
+.btn-bulk-cancel {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-bulk-cancel:hover {
+  border-color: #ccc;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.btn-bulk-cancel:active {
+  background: var(--border);
+}
+
+/* ---- 表格复选框 ---- */
+.row-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+#selectAllCheckbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+/* ---- 添加/编辑弹窗美化 ---- */
+
+/* 弹窗主体 */
+.modal-add-edit {
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  padding: 0;
+  overflow: hidden;
+  animation: modalPopIn 0.3s ease;
+}
+
+@keyframes modalPopIn {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* 弹窗头部 */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header .modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 0;
+  color: var(--text);
+  text-align: left;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.modal-close:active {
+  background: var(--border);
+  transform: scale(0.92);
+}
+
+/* 表单区域 */
+.modal-add-edit form {
+  padding: 20px 24px;
+}
+
+.admin-form-group {
+  margin-bottom: 20px;
+}
+
+.admin-form-group:last-child {
+  margin-bottom: 0;
+}
+
+/* 标签带图标 */
+.admin-modal-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.label-icon {
+  font-size: 16px;
+}
+
+.label-required {
+  color: #e53935;
+  font-size: 12px;
+}
+
+/* 输入框 */
+.admin-modal-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  background: var(--card-bg);
+  transition: all 0.2s;
+  color: var(--text);
+}
+
+.admin-modal-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(248, 111, 82, 0.1);
+}
+
+.admin-modal-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+/* 下拉选择框 */
+.admin-modal-select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  background: var(--card-bg);
+  color: var(--text);
+  transition: all 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.admin-modal-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(248, 111, 82, 0.1);
+}
+
+/* 带前缀的输入框（价格 ¥） */
+.input-with-prefix {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-prefix {
+  position: absolute;
+  left: 14px;
+  font-size: 15px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.input-with-prefix.admin-modal-input {
+  padding-left: 34px;
+}
+
+/* 底部操作按钮 */
+.modal-add-edit .modal-actions {
+  padding: 16px 24px 24px;
+  gap: 12px;
+}
+
+.modal-add-edit .modal-actions button {
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
 /* ---- 响应式：桌面端 ---- */
 @media (min-width: 768px) {
   .admin-topbar {
@@ -503,5 +815,60 @@ body {
     color: var(--text-secondary);
     margin-right: 12px;
     flex-shrink: 0;
+  }
+
+  /* ---- 出库记录表格（共享 admin-table 样式） ---- */
+  .order-table-wrapper .admin-table .col-applicant {
+    width: 100px;
+    font-weight: 600;
+  }
+
+  .order-table-wrapper .admin-table .col-reason {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .order-table-wrapper .admin-table .col-time {
+    width: 160px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .order-table-wrapper .admin-table .col-items-detail {
+    max-width: 300px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* ---- 订单详情展开 ---- */
+  .order-detail-toggle {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+  }
+
+  .order-detail-row {
+    display: none;
+  }
+
+  .order-detail-row.expanded {
+    display: table-row;
+  }
+
+  .order-detail-row td {
+    padding: 8px 12px 8px 24px;
+    background: var(--bg);
+  }
+
+  .order-detail-item {
+    display: inline-block;
+    margin-right: 12px;
+    font-size: 12px;
   }
 }
