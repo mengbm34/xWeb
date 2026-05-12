@@ -315,14 +315,14 @@ async function handleSave() {
 
   try {
     if (adminState.editingId) {
-      // 立即更新本地状态
-      var idx = adminState.products.findIndex(function (p) { return p.id === adminState.editingId; });
+      var editingId = adminState.editingId;
+      var idx = adminState.products.findIndex(function (p) { return p.id === editingId; });
       if (idx !== -1) {
         adminState.products[idx] = Object.assign({}, adminState.products[idx], product, { is_active: adminState.products[idx].is_active });
       }
       applyFilter();
       closeAddEditModal();
-      await SupabaseClient.restUpdate('products', adminState.editingId, product);
+      await SupabaseClient.restUpdate('products', editingId, product);
       showToast('商品更新成功');
     } else {
       // 立即添加到本地状态
