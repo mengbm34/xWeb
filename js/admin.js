@@ -19,6 +19,7 @@ var adminState = {
   excelData: [],
   excelErrors: [],
   searchQuery: '',
+  activeCategory: '',
   selectedIds: [],
   orders: [],
   filteredOrders: [],
@@ -70,6 +71,7 @@ function cacheDom() {
   dom.ordersBulkCount = document.getElementById('ordersBulkCount');
   dom.btnOrdersBulkDelete = document.getElementById('btnOrdersBulkDelete');
   dom.btnOrdersBulkCancel = document.getElementById('btnOrdersBulkCancel');
+  dom.categoryFilter = document.getElementById('categoryFilter');
 }
 
 // ==================== 工具函数 ====================
@@ -309,20 +311,31 @@ async function handleSave() {
   if (!category) { showToast('请选择分类'); dom.formCategory.focus(); return; }
   if (price < 0) { showToast('价格不能为负数'); dom.formPrice.focus(); return; }
 
-  var product = { id: id, name: name, category: category, price: price };
+  var product = { id: id, name: name, category: category, price: price, is_active: true };
 
   try {
     if (adminState.editingId) {
+      // 立即更新本地状态
+      var idx = adminState.products.findIndex(function (p) { return p.id === adminState.editingId; });
+      if (idx !== -1) {
+        adminState.products[idx] = Object.assign({}, adminState.products[idx], product, { is_active: adminState.products[idx].is_active });
+      }
+      applyFilter();
+      closeAddEditModal();
       await SupabaseClient.restUpdate('products', adminState.editingId, product);
       showToast('商品更新成功');
     } else {
+      // 立即添加到本地状态
+      adminState.products = adminState.products.concat(product);
+      closeAddEditModal();
+      applyFilter();
       await SupabaseClient.restInsert('products', [product]);
       showToast('商品添加成功');
     }
-    closeAddEditModal();
-    await loadProducts();
+    // 异步刷新远程数据以对齐
+    refreshRemoteProducts();
   } catch (e) {
-    showToast('保存失败：' + e.message);
+    showToast('操作失败：' + e.message);
   }
 }
 
@@ -335,8 +348,13 @@ async function handleDelete(id) {
   if (!confirm('确认删除商品 ' + id + '？')) return;
   try {
     await SupabaseClient.restDelete('products', id);
+    // 立即从本地状态移除，避免等待远程刷新导致用户感觉没删除成功
+    adminState.products = adminState.products.filter(function (p) { return p.id !== id; });
+    adminState.selectedIds = adminState.selectedIds.filter(function (sid) { return sid !== id; });
+    applyFilter();
     showToast('商品已删除');
-    await loadProducts();
+    // 异步刷新远程数据（静默）
+    refreshRemoteProducts();
   } catch (e) {
     showToast('删除失败：' + e.message);
   }
@@ -346,15 +364,40 @@ async function handleToggle(id) {
   var product = adminState.products.find(function (p) { return p.id === id; });
   if (!product) return;
   try {
-    await SupabaseClient.restUpdate('products', id, { is_active: !product.is_active });
-    showToast(product.is_active ? '商品已停用' : '商品已启用');
-    await loadProducts();
+    // 先更新本地状态，立即反馈
+    product.is_active = !product.is_active;
+    applyFilter();
+    await SupabaseClient.restUpdate('products', id, { is_active: product.is_active });
+    showToast(product.is_active ? '商品已启用' : '商品已停用');
   } catch (e) {
+    // 回滚
+    product.is_active = !product.is_active;
+    applyFilter();
     showToast('操作失败：' + e.message);
   }
 }
 
 // ==================== 批量选择 & 删除 ====================
+
+function refreshRemoteProducts() {
+  SupabaseClient.restQuery('products', 'order=id.asc').then(function (products) {
+    if (products && products.length > 0) {
+      adminState.products = products.map(function (p) {
+        return {
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          price: parseFloat(p.price) || 0,
+          is_active: p.is_active !== false,
+        };
+      });
+      localStorage.setItem('products_cache', JSON.stringify(adminState.products));
+      applyFilter();
+    }
+  }).catch(function () {
+    // 静默失败，保持当前本地状态
+  });
+}
 
 function updateSelectionUI() {
   var count = adminState.selectedIds.length;
@@ -372,12 +415,19 @@ async function handleBulkDelete() {
   if (!confirm('确认删除选中的 ' + count + ' 个商品？')) return;
 
   try {
-    for (var i = 0; i < adminState.selectedIds.length; i++) {
-      await SupabaseClient.restDelete('products', adminState.selectedIds[i]);
-    }
+    // 先删除本地状态，立即刷新表格
+    var idsToDelete = adminState.selectedIds.slice();
+    adminState.products = adminState.products.filter(function (p) {
+      return idsToDelete.indexOf(p.id) === -1;
+    });
     adminState.selectedIds = [];
+    applyFilter();
     showToast('已删除 ' + count + ' 个商品');
-    await loadProducts();
+    // 异步删除远程数据（静默）
+    for (var i = 0; i < idsToDelete.length; i++) {
+      await SupabaseClient.restDelete('products', idsToDelete[i]);
+    }
+    refreshRemoteProducts();
   } catch (e) {
     showToast('批量删除失败：' + e.message);
   }
@@ -534,15 +584,15 @@ async function confirmExcelImport() {
 
 function applyFilter() {
   var query = adminState.searchQuery.toLowerCase();
-  if (!query) {
-    adminState.filteredProducts = adminState.products.slice();
-  } else {
-    adminState.filteredProducts = adminState.products.filter(function (p) {
-      return p.name.toLowerCase().indexOf(query) !== -1 ||
-             p.id.toLowerCase().indexOf(query) !== -1 ||
-             p.category.toLowerCase().indexOf(query) !== -1;
-    });
-  }
+  var category = adminState.activeCategory;
+  adminState.filteredProducts = adminState.products.filter(function (p) {
+    var matchCategory = !category || p.category === category;
+    var matchSearch = !query ||
+      p.name.toLowerCase().indexOf(query) !== -1 ||
+      p.id.toLowerCase().indexOf(query) !== -1 ||
+      p.category.toLowerCase().indexOf(query) !== -1;
+    return matchCategory && matchSearch;
+  });
   renderStats();
   renderProductTable();
 }
@@ -739,12 +789,18 @@ async function handleOrdersBulkDelete() {
   if (!confirm('确认删除选中的 ' + count + ' 条出库记录？')) return;
 
   try {
-    for (var i = 0; i < adminState.selectedOrderIds.length; i++) {
-      await SupabaseClient.restDelete('outbound_orders', adminState.selectedOrderIds[i]);
-    }
+    // 立即从本地状态移除
+    var idsToDelete = adminState.selectedOrderIds.slice();
+    adminState.orders = adminState.orders.filter(function (o) {
+      return idsToDelete.indexOf(o.id) === -1;
+    });
     adminState.selectedOrderIds = [];
+    applyOrderFilter();
     showToast('已删除 ' + count + ' 条出库记录');
-    await loadOrders();
+    // 异步删除远程数据
+    for (var i = 0; i < idsToDelete.length; i++) {
+      await SupabaseClient.restDelete('outbound_orders', idsToDelete[i]);
+    }
   } catch (e) {
     showToast('批量删除失败：' + e.message);
   }
@@ -766,6 +822,13 @@ function init() {
   dom.btnManualAdd.addEventListener('click', openAddModal);
 
   initSearch();
+
+  if (dom.categoryFilter) {
+    dom.categoryFilter.addEventListener('change', function () {
+      adminState.activeCategory = dom.categoryFilter.value;
+      applyFilter();
+    });
+  }
 
   dom.btnAddEditCancel.addEventListener('click', closeAddEditModal);
   dom.btnAddEditSubmit.addEventListener('click', handleSave);
@@ -836,7 +899,7 @@ function init() {
   }
 
   // 取消选择
-  if (dom.btnBulkCancel) {
+  if (dom.bulkBar) {
     dom.btnBulkCancel.addEventListener('click', function () {
       adminState.selectedIds = [];
       renderProductTable();
