@@ -17,6 +17,6 @@ jobs:
       - name: Upload static files
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./前端
+          path: .
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
