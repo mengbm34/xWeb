@@ -3,11 +3,7 @@
  * 包含：商品数据、分类切换、搜索、数量控制、结算、Supabase 数据层
  */
 
-// ==================== 配置 ====================
-const CONFIG = {
-  supabaseUrl: window.__SUPABASE_URL__ || 'YOUR_SUPABASE_URL',
-  supabaseKey: window.__SUPABASE_ANON_KEY__ || 'YOUR_SUPABASE_ANON_KEY',
-};
+// Supabase 配置与后台共享 supabase-client.js，无需重复定义
 
 // ==================== 商品数据（硬编码兜底） ====================
 var HARDCODED_PRODUCTS = [
@@ -174,7 +170,7 @@ async function loadProductsFromSupabase() {
     }
   }
 
-  if (!CONFIG.supabaseUrl || CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') {
+  if (!SupabaseClient.isConfigured) {
     if (PRODUCTS.length === 0) {
       PRODUCTS = HARDCODED_PRODUCTS;
       renderTabs();
@@ -617,18 +613,19 @@ function initSubmit() {
 // ==================== Supabase 数据层 ====================
 
 async function saveToSupabase(order) {
-  if (CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') {
+  if (!SupabaseClient.isConfigured) {
     saveToLocalStorage(order);
     return;
   }
 
+  var config = SupabaseClient.getConfig();
   try {
-    const response = await fetch(`${CONFIG.supabaseUrl}/rest/v1/outbound_orders`, {
+    const response = await fetch(`${config.supabaseUrl}/rest/v1/outbound_orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': CONFIG.supabaseKey,
-        'Authorization': `Bearer ${CONFIG.supabaseKey}`,
+        'apikey': config.supabaseKey,
+        'Authorization': `Bearer ${config.supabaseKey}`,
         'Prefer': 'return=representation',
       },
       body: JSON.stringify(order),
@@ -656,14 +653,15 @@ function saveToLocalStorage(order) {
 }
 
 async function fetchOrders() {
-  if (CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') {
+  if (!SupabaseClient.isConfigured) {
     return JSON.parse(localStorage.getItem('outbound_orders') || '[]');
   }
 
-  const response = await fetch(`${CONFIG.supabaseUrl}/rest/v1/outbound_orders?order=created_at.desc&limit=50`, {
+  var config = SupabaseClient.getConfig();
+  const response = await fetch(`${config.supabaseUrl}/rest/v1/outbound_orders?order=created_at.desc&limit=50`, {
     headers: {
-      'apikey': CONFIG.supabaseKey,
-      'Authorization': `Bearer ${CONFIG.supabaseKey}`,
+      'apikey': config.supabaseKey,
+      'Authorization': `Bearer ${config.supabaseKey}`,
     },
   });
 
@@ -674,13 +672,14 @@ async function fetchOrders() {
 // ==================== Supabase Realtime 重连 ====================
 
 function subscribeToOrders(callback) {
-  if (CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') return;
+  if (!SupabaseClient.isConfigured) return;
 
+  var config = SupabaseClient.getConfig();
   let reconnectAttempts = 0;
   const maxDelay = 30000;
 
   function connect() {
-    const wsUrl = CONFIG.supabaseUrl.replace('https://', 'wss://')
+    const wsUrl = config.supabaseUrl.replace('https://', 'wss://')
       .replace('http://', 'ws://') + '/realtime/v1/websocket';
 
     const ws = new WebSocket(wsUrl);
