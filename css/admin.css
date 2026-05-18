@@ -230,6 +230,15 @@ body {
   background: #d4b07a;
 }
 
+.btn-export {
+  background: var(--accent);
+  color: var(--text);
+}
+
+.btn-export:active {
+  background: #d4b07a;
+}
+
 .admin-actions .admin-search {
   flex: 1;
   min-width: 150px;

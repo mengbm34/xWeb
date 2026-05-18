@@ -62,6 +62,7 @@ function cacheDom() {
   dom.btnExcelConfirm = document.getElementById('btnExcelConfirm');
   dom.toast = document.getElementById('adminToast');
   dom.btnRefreshOrders = document.getElementById('btnRefreshOrders');
+  dom.btnExportOrders = document.getElementById('btnExportOrders');
   dom.ordersSearch = document.getElementById('ordersSearch');
   dom.orderTableWrapper = document.getElementById('orderTableWrapper');
   dom.bulkBar = document.getElementById('bulkBar');
@@ -580,6 +581,83 @@ async function confirmExcelImport() {
   }
 }
 
+// ==================== Excel 导出 ====================
+
+function exportOrdersToExcel() {
+  var orders = adminState.filteredOrders;
+
+  if (!orders || orders.length === 0) {
+    showToast('暂无记录可导出');
+    return;
+  }
+
+  // 展平：每个商品明细一行，订单信息重复
+  var rows = [];
+  var seq = 1;
+  orders.forEach(function (o) {
+    var statusLabel = o.status === 'approved' ? '已批准' : o.status === 'rejected' ? '已驳回' : '待审批';
+    if (!o.items || o.items.length === 0) {
+      rows.push({
+        '序号': seq++,
+        '申请人': o.applicant || '',
+        '出库原因': o.remark || '',
+        '商品编码': '',
+        '商品名称': '',
+        '单价': '',
+        '数量': '',
+        '小计': '',
+        '总金额': o.totalAmount || 0,
+        '状态': statusLabel,
+        '申请时间': formatDateTime(o.createdAt),
+      });
+    } else {
+      o.items.forEach(function (item) {
+        rows.push({
+          '序号': seq++,
+          '申请人': o.applicant || '',
+          '出库原因': o.remark || '',
+          '商品编码': item.productId || '',
+          '商品名称': item.productName || '',
+          '单价': item.price || 0,
+          '数量': item.qty || 0,
+          '小计': item.subtotal || (item.price * item.qty) || 0,
+          '总金额': o.totalAmount || 0,
+          '状态': statusLabel,
+          '申请时间': formatDateTime(o.createdAt),
+        });
+      });
+    }
+  });
+
+  var ws = XLSX.utils.json_to_sheet(rows);
+
+  // 设置列宽
+  ws['!cols'] = [
+    { wch: 6 },  // 序号
+    { wch: 10 }, // 申请人
+    { wch: 20 }, // 出库原因
+    { wch: 10 }, // 商品编码
+    { wch: 20 }, // 商品名称
+    { wch: 10 }, // 单价
+    { wch: 8 },  // 数量
+    { wch: 10 }, // 小计
+    { wch: 10 }, // 总金额
+    { wch: 8 },  // 状态
+    { wch: 18 }, // 申请时间
+  ];
+
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '出库记录');
+
+  // 文件名：出库记录_YYYY-MM-DD.xlsx
+  var now = new Date();
+  var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+  var dateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+  XLSX.writeFile(wb, '出库记录_' + dateStr + '.xlsx');
+
+  showToast('导出成功，共 ' + rows.length + ' 条记录');
+}
+
 // ==================== 搜索 ====================
 
 function applyFilter() {
@@ -891,6 +969,11 @@ function init() {
     dom.btnRefreshOrders.addEventListener('click', function () {
       loadOrders();
     });
+  }
+
+  // 导出出库记录
+  if (dom.btnExportOrders) {
+    dom.btnExportOrders.addEventListener('click', exportOrdersToExcel);
   }
 
   // 批量删除
