@@ -74,6 +74,11 @@
       <div class="admin-actions">
         <button class="btn-action" id="btnRefreshOrders">刷新</button>
         <button class="btn-action btn-export" id="btnExportOrders">导出Excel</button>
+        <select class="admin-select" id="ordersStatusFilter">
+          <option value="">全部</option>
+          <option value="pending">待出库</option>
+          <option value="shipped">已出库</option>
+        </select>
         <input type="text" class="admin-search" id="ordersSearch" placeholder="搜索申请人或原因..." autocomplete="off">
       </div>
 

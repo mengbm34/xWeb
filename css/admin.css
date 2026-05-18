@@ -366,6 +366,15 @@ body {
   color: var(--text-secondary);
 }
 
+.badge-pending {
+  background: rgba(248, 111, 82, 0.12);
+  color: var(--primary);
+}
+
+.btn-icon-mark-shipped {
+  color: var(--success);
+}
+
 /* ---- 操作按钮 ---- */
 .btn-icon {
   background: none;

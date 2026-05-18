@@ -24,6 +24,7 @@ var adminState = {
   orders: [],
   filteredOrders: [],
   ordersSearchQuery: '',
+  ordersStatusFilter: '',
   selectedOrderIds: [],
   activeTab: 'products',
 };
@@ -73,6 +74,7 @@ function cacheDom() {
   dom.btnOrdersBulkDelete = document.getElementById('btnOrdersBulkDelete');
   dom.btnOrdersBulkCancel = document.getElementById('btnOrdersBulkCancel');
   dom.categoryFilter = document.getElementById('categoryFilter');
+  dom.ordersStatusFilter = document.getElementById('ordersStatusFilter');
 }
 
 // ==================== 工具函数 ====================
@@ -591,11 +593,14 @@ function exportOrdersToExcel() {
     return;
   }
 
+  var filterLabel = adminState.ordersStatusFilter === 'pending' ? '待出库' : adminState.ordersStatusFilter === 'shipped' ? '已出库' : '全部';
+
   // 展平：每个商品明细一行，订单信息重复
   var rows = [];
   var seq = 1;
   orders.forEach(function (o) {
-    var statusLabel = o.status === 'approved' ? '已批准' : o.status === 'rejected' ? '已驳回' : '待审批';
+    var approveLabel = o.status === 'approved' ? '已批准' : o.status === 'rejected' ? '已驳回' : '待审批';
+    var outboundLabel = (o.outbound_status || 'pending') === 'shipped' ? '已出库' : '待出库';
     if (!o.items || o.items.length === 0) {
       rows.push({
         '序号': seq++,
@@ -607,7 +612,8 @@ function exportOrdersToExcel() {
         '数量': '',
         '小计': '',
         '总金额': o.totalAmount || 0,
-        '状态': statusLabel,
+        '审批状态': approveLabel,
+        '出库状态': outboundLabel,
         '申请时间': formatDateTime(o.createdAt),
       });
     } else {
@@ -622,7 +628,8 @@ function exportOrdersToExcel() {
           '数量': item.qty || 0,
           '小计': item.subtotal || (item.price * item.qty) || 0,
           '总金额': o.totalAmount || 0,
-          '状态': statusLabel,
+          '审批状态': approveLabel,
+          '出库状态': outboundLabel,
           '申请时间': formatDateTime(o.createdAt),
         });
       });
@@ -642,20 +649,21 @@ function exportOrdersToExcel() {
     { wch: 8 },  // 数量
     { wch: 10 }, // 小计
     { wch: 10 }, // 总金额
-    { wch: 8 },  // 状态
+    { wch: 8 },  // 审批状态
+    { wch: 8 },  // 出库状态
     { wch: 18 }, // 申请时间
   ];
 
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '出库记录');
 
-  // 文件名：出库记录_YYYY-MM-DD.xlsx
+  // 文件名：出库记录_筛选状态_YYYY-MM-DD.xlsx
   var now = new Date();
   var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
   var dateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
-  XLSX.writeFile(wb, '出库记录_' + dateStr + '.xlsx');
+  XLSX.writeFile(wb, '出库记录_' + filterLabel + '_' + dateStr + '.xlsx');
 
-  showToast('导出成功，共 ' + rows.length + ' 条记录');
+  showToast('导出成功，共 ' + rows.length + ' 条' + filterLabel + '记录');
 }
 
 // ==================== 搜索 ====================
@@ -728,14 +736,15 @@ async function loadOrders() {
 
 function applyOrderFilter() {
   var query = adminState.ordersSearchQuery.toLowerCase();
-  if (!query) {
-    adminState.filteredOrders = adminState.orders.slice();
-  } else {
-    adminState.filteredOrders = adminState.orders.filter(function (o) {
-      return (o.applicant && o.applicant.toLowerCase().indexOf(query) !== -1) ||
-             (o.remark && o.remark.toLowerCase().indexOf(query) !== -1);
-    });
-  }
+  var statusFilter = adminState.ordersStatusFilter;
+  adminState.filteredOrders = adminState.orders.filter(function (o) {
+    var matchSearch = !query ||
+      (o.applicant && o.applicant.toLowerCase().indexOf(query) !== -1) ||
+      (o.remark && o.remark.toLowerCase().indexOf(query) !== -1);
+    var outboundStatus = o.outbound_status || 'pending';
+    var matchStatus = !statusFilter || outboundStatus === statusFilter;
+    return matchSearch && matchStatus;
+  });
   renderOrders();
 }
 
@@ -752,7 +761,7 @@ function renderOrders() {
   var html = '<table class="admin-table">';
   html += '<thead><tr>';
   html += '<th style="width:40px"><input type="checkbox" id="selectAllOrderCheckbox" title="全选"></th>';
-  html += '<th>申请人</th><th>出库原因</th><th>商品明细</th><th>总金额</th><th>数量</th><th>状态</th><th>申请时间</th><th>操作</th>';
+  html += '<th>申请人</th><th>出库原因</th><th>商品明细</th><th>总金额</th><th>数量</th><th>审批状态</th><th>出库状态</th><th>申请时间</th><th>操作</th>';
   html += '</tr></thead><tbody>';
 
   orders.forEach(function (o, index) {
@@ -762,8 +771,14 @@ function renderOrders() {
     }).join('、') : '';
     if (o.items && o.items.length > 2) itemsPreview += ' 等' + o.items.length + '项';
 
-    var statusLabel = o.status === 'approved' ? '已批准' : o.status === 'rejected' ? '已驳回' : '待审批';
-    var statusClass = o.status === 'approved' ? 'badge-active' : o.status === 'rejected' ? 'badge-inactive' : '';
+    // 审批状态
+    var approveLabel = o.status === 'approved' ? '已批准' : o.status === 'rejected' ? '已驳回' : '待审批';
+    var approveClass = o.status === 'approved' ? 'badge-active' : o.status === 'rejected' ? 'badge-inactive' : '';
+
+    // 出库状态
+    var outboundStatus = o.outbound_status || 'pending';
+    var outboundLabel = outboundStatus === 'shipped' ? '已出库' : '待出库';
+    var outboundClass = outboundStatus === 'shipped' ? 'badge-active' : 'badge-pending';
 
     html += '<tr>';
     html += '<td style="width:40px"><input type="checkbox" class="order-row-checkbox" data-id="' + o.id + '"' + checked + '></td>';
@@ -772,17 +787,21 @@ function renderOrders() {
     html += '<td class="col-items-detail" data-label="商品">' + escapeHtml(itemsPreview) + '</td>';
     html += '<td data-label="总金额" class="col-price">¥' + (o.totalAmount || 0).toFixed(2) + '</td>';
     html += '<td data-label="数量">' + (o.totalQty || 0) + '</td>';
-    html += '<td data-label="状态"><span class="badge ' + statusClass + '">' + statusLabel + '</span></td>';
+    html += '<td data-label="审批"><span class="badge ' + approveClass + '">' + approveLabel + '</span></td>';
+    html += '<td data-label="出库"><span class="badge ' + outboundClass + '">' + outboundLabel + '</span></td>';
     html += '<td class="col-time" data-label="时间">' + formatDateTime(o.createdAt) + '</td>';
     html += '<td data-label="">';
     html += '<button class="btn-icon order-detail-toggle" data-index="' + index + '" title="查看详情">详情</button>';
+    if (outboundStatus === 'pending') {
+      html += '<button class="btn-icon btn-icon-mark-shipped" data-action="markShipped" data-id="' + o.id + '" title="标记已出库">已出库</button>';
+    }
     html += '</td>';
     html += '</tr>';
 
     // 展开的详情行
     if (o.items) {
       html += '<tr class="order-detail-row" data-index="' + index + '">';
-      html += '<td colspan="9">';
+      html += '<td colspan="10">';
       html += '<strong>完整明细：</strong>';
       o.items.forEach(function (item) {
         html += '<span class="order-detail-item">' + escapeHtml(item.productName) + ' x' + item.qty + ' ¥' + (item.subtotal || item.price * item.qty).toFixed(2) + '</span>';
@@ -806,6 +825,14 @@ function renderOrders() {
     });
   });
 
+  // 绑定标记已出库按钮
+  dom.orderTableWrapper.querySelectorAll('.btn-icon-mark-shipped').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.dataset.id;
+      handleMarkShipped(id);
+    });
+  });
+
   // 绑定订单复选框
   bindOrderSelectionEvents();
   updateOrdersSelectionUI();
@@ -816,6 +843,28 @@ function formatDateTime(iso) {
   var d = new Date(iso);
   var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
   return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+// ==================== 标记已出库 ====================
+
+async function handleMarkShipped(id) {
+  if (!confirm('确认将该申请标记为已出库？')) return;
+
+  // 乐观更新本地状态
+  var order = adminState.orders.find(function (o) { return o.id === id; });
+  if (!order) return;
+  order.outbound_status = 'shipped';
+  applyOrderFilter();
+
+  try {
+    await SupabaseClient.restUpdate('outbound_orders', id, { outbound_status: 'shipped' });
+    showToast('已标记为出库');
+  } catch (e) {
+    // 回滚
+    order.outbound_status = 'pending';
+    applyOrderFilter();
+    showToast('操作失败：' + e.message);
+  }
 }
 
 // ==================== 出库记录批量选择 & 删除 ====================
@@ -961,6 +1010,14 @@ function init() {
         adminState.ordersSearchQuery = dom.ordersSearch.value.trim();
         applyOrderFilter();
       }, 200);
+    });
+  }
+
+  // 出库状态筛选
+  if (dom.ordersStatusFilter) {
+    dom.ordersStatusFilter.addEventListener('change', function () {
+      adminState.ordersStatusFilter = dom.ordersStatusFilter.value;
+      applyOrderFilter();
     });
   }
 
