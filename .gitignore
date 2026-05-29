@@ -24,3 +24,7 @@ build/
 # Logs
 *.log
 npm-debug.log*
+
+# Playwright 自动化脚本的本地状态（含登录 cookie，不能进版本库）
+scripts/.playwright-user-data/
+scripts/supabase-sql-result.png
