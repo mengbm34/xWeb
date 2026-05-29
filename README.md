@@ -74,32 +74,66 @@ python3 -m http.server 8080
 
 ### 第二步：创建数据库表
 
-在 Supabase SQL Editor 中执行：
+在 Supabase SQL Editor 中执行下面这段 SQL。两张表都要建：`outbound_orders`（出库申请）和 `products`（商品）。
 
 ```sql
-CREATE TABLE outbound_orders (
+-- ========== 出库申请表 ==========
+CREATE TABLE IF NOT EXISTS outbound_orders (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   applicant text NOT NULL,
   remark text,
   items jsonb NOT NULL,
   total_amount numeric NOT NULL,
   total_qty integer NOT NULL,
-  status text DEFAULT 'pending',
+  status text DEFAULT 'pending',          -- 审批状态: pending / approved / rejected
+  outbound_status text DEFAULT 'pending', -- 出库状态: pending / shipped
   created_at timestamptz DEFAULT now()
 );
 
--- 开启 Realtime 实时同步
+-- 开启 Realtime 实时同步（前后台 WebSocket 推送）
 ALTER PUBLICATION supabase_realtime ADD TABLE outbound_orders;
 
--- 设置行级安全策略（允许匿名读写）
+-- 行级安全策略：匿名可读/写/改/删
+--   后台「标记已出库」需要 UPDATE，批量删除需要 DELETE
 ALTER TABLE outbound_orders ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow anonymous read" ON outbound_orders
-  FOR SELECT USING (true);
+DROP POLICY IF EXISTS "anon_select" ON outbound_orders;
+DROP POLICY IF EXISTS "anon_insert" ON outbound_orders;
+DROP POLICY IF EXISTS "anon_update" ON outbound_orders;
+DROP POLICY IF EXISTS "anon_delete" ON outbound_orders;
 
-CREATE POLICY "Allow anonymous insert" ON outbound_orders
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "anon_select" ON outbound_orders FOR SELECT USING (true);
+CREATE POLICY "anon_insert" ON outbound_orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "anon_update" ON outbound_orders FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "anon_delete" ON outbound_orders FOR DELETE USING (true);
+
+
+-- ========== 商品表 ==========
+CREATE TABLE IF NOT EXISTS products (
+  id text PRIMARY KEY,                    -- 商品编码（如 CZ0001）
+  name text NOT NULL,
+  category text NOT NULL,                 -- 彩妆 / 护肤口服 / 洗护 / 周边 / 院线
+  price numeric DEFAULT 0,
+  is_active boolean DEFAULT true,         -- 是否上架
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE products;
+
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "anon_select" ON products;
+DROP POLICY IF EXISTS "anon_insert" ON products;
+DROP POLICY IF EXISTS "anon_update" ON products;
+DROP POLICY IF EXISTS "anon_delete" ON products;
+
+CREATE POLICY "anon_select" ON products FOR SELECT USING (true);
+CREATE POLICY "anon_insert" ON products FOR INSERT WITH CHECK (true);
+CREATE POLICY "anon_update" ON products FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "anon_delete" ON products FOR DELETE USING (true);
 ```
+
+> **注意字段命名**：表结构使用 snake_case（`total_amount` / `total_qty` / `created_at` / `outbound_status`）。前端代码已对齐，自定义改动时请保持一致，否则 PostgREST 会以"列不存在"或 NOT NULL 约束失败为由拒绝写入，订单会被静默丢失。
 
 ### 第三步：配置前端
 
