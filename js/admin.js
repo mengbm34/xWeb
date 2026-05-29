@@ -722,16 +722,30 @@ function switchTab(tabName) {
 async function loadOrders() {
   dom.orderTableWrapper.innerHTML = '<div class="admin-loading">加载出库记录中...</div>';
   try {
+    // Supabase 查询成功就用其结果（即使为空），避免被本机 localStorage 旧数据掩盖真实状态
     var orders = await SupabaseClient.restQuery('outbound_orders', 'order=created_at.desc&limit=200');
-    if (!orders || orders.length === 0) {
-      // 降级：读 localStorage
-      orders = JSON.parse(localStorage.getItem('outbound_orders') || '[]');
-    }
-    adminState.orders = orders;
+    adminState.orders = (orders || []).map(normalizeOrder);
   } catch (e) {
-    adminState.orders = JSON.parse(localStorage.getItem('outbound_orders') || '[]');
+    // 仅在真正异常（网络/未配置）时降级到本机 localStorage
+    var local = JSON.parse(localStorage.getItem('outbound_orders') || '[]');
+    adminState.orders = local.map(normalizeOrder);
+    showToast('云端加载失败，已显示本地缓存');
   }
   applyOrderFilter();
+}
+
+/**
+ * 统一订单字段命名：兼容 Supabase 返回的 snake_case 以及旧 localStorage 中的 camelCase
+ * 渲染层始终通过 totalAmount/totalQty/createdAt 读取
+ */
+function normalizeOrder(o) {
+  if (!o) return o;
+  return Object.assign({}, o, {
+    totalAmount: o.total_amount != null ? Number(o.total_amount) : (o.totalAmount || 0),
+    totalQty: o.total_qty != null ? Number(o.total_qty) : (o.totalQty || 0),
+    createdAt: o.created_at || o.createdAt || null,
+    outbound_status: o.outbound_status || 'pending',
+  });
 }
 
 function applyOrderFilter() {

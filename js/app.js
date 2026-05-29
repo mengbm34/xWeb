@@ -572,14 +572,15 @@ async function submitOrder() {
   const totalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
   const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
 
+  // 字段名与 Supabase 表结构对齐（snake_case），避免 POST 因列名不匹配 / NOT NULL 约束失败
   const order = {
     applicant: name,
     remark: remark,
     items: items,
-    totalAmount: totalAmount,
-    totalQty: totalQty,
+    total_amount: totalAmount,
+    total_qty: totalQty,
     status: 'pending',
-    createdAt: new Date().toISOString(),
+    // created_at 由数据库默认值 now() 生成，不在前端传，避免时区/格式不一致
   };
 
   state.submitting = true;
@@ -613,36 +614,31 @@ function initSubmit() {
 // ==================== Supabase 数据层 ====================
 
 async function saveToSupabase(order) {
+  // 未配置 Supabase 时仅本地存储（单机模式）
   if (!SupabaseClient.isConfigured) {
     saveToLocalStorage(order);
     return;
   }
 
   var config = SupabaseClient.getConfig();
-  try {
-    const response = await fetch(`${config.supabaseUrl}/rest/v1/outbound_orders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': config.supabaseKey,
-        'Authorization': `Bearer ${config.supabaseKey}`,
-        'Prefer': 'return=representation',
-      },
-      body: JSON.stringify(order),
-    });
+  const response = await fetch(`${config.supabaseUrl}/rest/v1/outbound_orders`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': config.supabaseKey,
+      'Authorization': `Bearer ${config.supabaseKey}`,
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify(order),
+  });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.warn('Supabase 保存失败，降级到 localStorage:', error.message);
-      saveToLocalStorage(order);
-      return;
-    }
-
-    return response.json();
-  } catch (err) {
-    console.warn('Supabase 网络异常，降级到 localStorage:', err.message);
-    saveToLocalStorage(order);
+  // Supabase 配置存在但写入失败：必须抛错让用户知晓，避免"看似成功实则只在本机"
+  if (!response.ok) {
+    const err = await response.json().catch(function () { return {}; });
+    throw new Error(err.message || ('云端保存失败 HTTP ' + response.status));
   }
+
+  return response.json();
 }
 
 function saveToLocalStorage(order) {
