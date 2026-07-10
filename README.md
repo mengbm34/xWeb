@@ -141,6 +141,28 @@ CREATE POLICY "anon_delete" ON products FOR DELETE USING (true);
 - 任一设备提交出货单，其他设备会收到实时通知
 - 所有数据存储在 Supabase 云端，设备无关
 
+## 运维说明：免费版休眠与保活
+
+- **现象**：Supabase 免费版项目**连续约 7 天无任何 API 请求会被自动暂停（pause）**。一旦暂停，专属域名不可达，前后台商品/订单数据源全部失效。
+- **恢复**：登录 https://supabase.com/dashboard → 打开项目 → **Resume project**（数据不丢，暂停后 90 天内可恢复）。
+- **防复发**：已内置 `.github/workflows/keepalive.yml`，每天定时请求一次 REST API 保持活跃。也可到仓库 **Actions → Keep Supabase Awake → Run workflow** 手动触发/自检。
+- **数据重建**：如需重新初始化数据库，依次在 SQL Editor 执行 `scripts/supabase-schema.sql`（建表+RLS+Realtime）和 `scripts/seed-products.sql`（132 条商品种子）。
+- **前端降级**：后端临时不可达时，前台会降级显示 localStorage 缓存并弹出"云端断连"横幅，而非白屏。
+
+## 安全说明（已知风险，待加固）
+
+> ⚠️ **当前后台没有真实鉴权，存在数据被篡改/泄露的风险。** 请知悉后再决定是否对外公开访问地址。
+
+- **现状**：后台 `admin.html` 的"登录"只是浏览器端 `localStorage` 密码校验（假门）；前后台所有数据库读写都使用**可公开的 anon/publishable key**，且 RLS 策略对匿名放开了 `SELECT/INSERT/UPDATE/DELETE`。
+- **风险**：该公开 key 明文存在于已部署的前端源码中。**任何人查看源码即可读取全部出库单（含申请人、出库原因），并可任意增删改商品与订单。**
+- **为什么单改 RLS 不够**：只要后台仍用公开 key，数据库层无法区分"管理员"与"攻击者"，收紧写权限会连正版后台一起锁死。**根治必须引入真实鉴权。**
+- **推荐加固方案（后续实施）**：
+  1. 启用 **Supabase Auth（邮箱+密码）**，在控制台手建 1 个管理员账号（勾选 Auto Confirm 免邮箱确认）。
+  2. 后台改为真实登录，写操作使用登录后的用户 JWT（而非 anon key）。
+  3. 收紧 RLS：`products` 写操作限 `authenticated`；`outbound_orders` 仅 `INSERT` 对匿名开放（供前台下单），`SELECT/UPDATE/DELETE` 限 `authenticated`（禁止匿名读取/改删订单）。
+  4. 关闭匿名注册（`disable_signup`），避免他人用公开 key 自助注册。
+  - 上线顺序：先建账号 + 部署后台真实登录并验证可用，**再**执行 RLS 收紧 SQL，避免锁死线上后台。
+
 ## 推荐部署方式（免费）
 
 | 服务 | 说明 |
