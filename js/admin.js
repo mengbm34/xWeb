@@ -69,6 +69,7 @@ function cacheDom() {
   dom.bulkBar = document.getElementById('bulkBar');
   dom.bulkCount = document.getElementById('bulkCount');
   dom.btnBulkDelete = document.getElementById('btnBulkDelete');
+  dom.btnBulkCancel = document.getElementById('btnBulkCancel');
   dom.ordersBulkBar = document.getElementById('ordersBulkBar');
   dom.ordersBulkCount = document.getElementById('ordersBulkCount');
   dom.btnOrdersBulkDelete = document.getElementById('btnOrdersBulkDelete');

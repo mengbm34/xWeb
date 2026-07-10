@@ -78,7 +78,7 @@
     var res = await fetch(url, {
       method: 'POST',
       headers: buildHeaders({
-        'Prefer': 'return=representation,resolution=merge-duplicate',
+        'Prefer': 'return=representation,resolution=merge-duplicates',
       }),
       body: JSON.stringify(rows),
     });
@@ -127,17 +127,22 @@
     var maxDelay = 30000;
 
     function connect() {
-      var wsUrl = CONFIG.supabaseUrl.replace('https://', 'wss://')
-        .replace('http://', 'ws://') + '/realtime/v1/websocket';
+      // Realtime 鉴权要求：apikey 与协议版本必须放在 URL 查询串，
+      // 否则服务端直接拒绝连接（表现为 "HTTP Authentication failed"）。
+      var wsUrl = CONFIG.supabaseUrl.replace('https://', 'wss://').replace('http://', 'ws://')
+        + '/realtime/v1/websocket?apikey=' + encodeURIComponent(CONFIG.supabaseKey) + '&vsn=1.0.0';
 
       var ws = new WebSocket(wsUrl);
+      var heartbeatTimer = null;
 
       ws.onopen = function () {
         reconnectAttempts = 0;
+        // 订阅该表的所有变更；access_token 必带，供 RLS 鉴权
         ws.send(JSON.stringify({
           event: 'phx_join',
           topic: 'realtime:' + table,
           payload: {
+            access_token: CONFIG.supabaseKey,
             config: {
               postgres_changes: [{
                 event: '*',
@@ -148,22 +153,31 @@
           },
           ref: '1',
         }));
+        // 心跳：每 25s 发一次，防止服务端因空闲（约 60s）主动断开
+        heartbeatTimer = setInterval(function () {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb' }));
+          }
+        }, 25000);
       };
 
       ws.onmessage = function (event) {
         try {
           var data = JSON.parse(event.data);
-          if (data.payload && data.payload.record) {
-            callback(data.payload.record);
+          // 数据库变更事件：记录位于 payload.data.record（INSERT/UPDATE 为新行，
+          // DELETE 时 record 为空、old_record 为旧行）。
+          if (data.event === 'postgres_changes' && data.payload && data.payload.data) {
+            callback(data.payload.data.record, data.payload.data);
           }
         } catch (e) {
-          // 忽略非 JSON 消息
+          // 忽略非 JSON / 无关消息
         }
       };
 
       ws.onerror = function () {};
 
       ws.onclose = function () {
+        if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
         var delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxDelay);
         reconnectAttempts++;
         setTimeout(connect, delay);
