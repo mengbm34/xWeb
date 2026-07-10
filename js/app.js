@@ -5,208 +5,70 @@
 
 // Supabase 配置与后台共享 supabase-client.js，无需重复定义
 
-// ==================== 商品数据（硬编码兜底） ====================
-var HARDCODED_PRODUCTS = [
-  // 彩妆
-  { id: 'CZ0001', name: '焕彩修颜隔离霜', category: '彩妆', price: 128 },
-  { id: 'CZ0002', name: '植萃润手霜', category: '彩妆', price: 68 },
-  { id: 'CZ0003', name: '轻妆靓颜气垫粉底液I (柔肤色)', category: '彩妆', price: 158 },
-  { id: 'CZ0004', name: '轻妆靓颜气垫粉底液Ⅱ (自然色)', category: '彩妆', price: 158 },
-  { id: 'CZ0007', name: '丝绒柔雾口红(#63微豆沙)', category: '彩妆', price: 98 },
-  { id: 'CZ0008', name: '丝绒柔雾口红(#999赤焰正红)', category: '彩妆', price: 98 },
-  { id: 'CZ001', name: '焕彩修颜隔离霜(5g体验装)', category: '彩妆', price: 0 },
-  { id: 'CZ0010', name: '自在八色全脸盘(#蔷薇大地)', category: '彩妆', price: 128 },
-  { id: 'CZ0011', name: '丝绒柔雾口红(#196摩登暖橘)', category: '彩妆', price: 128 },
-  { id: 'CZ0012', name: '水镜光润口红(#415瑰夏)', category: '彩妆', price: 128 },
-  { id: 'CZ0013', name: '牛油果沁润卸妆膏', category: '彩妆', price: 168 },
-  { id: 'CZ0014', name: '柔焦定妆蜜粉', category: '彩妆', price: 168 },
-  { id: 'CZ0015', name: '光感修容高光盘', category: '彩妆', price: 168 },
-  { id: 'CZ0016', name: '水漾唇部精华', category: '彩妆', price: 168 },
-  { id: 'CZ0017', name: '丝绒柔雾唇釉(#26奶茶色)', category: '彩妆', price: 78 },
-  { id: 'CZ0018', name: '丝绒柔雾唇釉(#56复古红)', category: '彩妆', price: 78 },
-  { id: 'CZ0019', name: '臻致眼部精华护理液', category: '彩妆', price: 98 },
-  { id: 'CZ0020', name: '雾感立体眉粉笔(茶褐色)', category: '彩妆', price: 78 },
-  { id: 'CZ0021', name: '雾感立体眉粉笔(烟灰色)', category: '彩妆', price: 78 },
-  { id: 'CZ0022', name: '胡萝卜素柔润护唇膏(#倾城)', category: '彩妆', price: 39 },
-  { id: 'CZ0023', name: '胡萝卜素柔润护唇膏(#映玉)', category: '彩妆', price: 39 },
-  { id: 'CZ0024', name: '牛油果保湿护唇膏', category: '彩妆', price: 39 },
-
-  // 护肤口服
-  { id: 'JM0001', name: '奢润臻颜御纹精华', category: '护肤口服', price: 59 },
-  { id: 'KF0007', name: 'AKG+抗糖抗氧抗初老精华饮', category: '护肤口服', price: 199 },
-  { id: 'KF0008', name: '胶原蛋白肽饮', category: '护肤口服', price: 169 },
-  { id: 'KF0009', name: '葡萄籽花青素精华胶囊', category: '护肤口服', price: 199 },
-  { id: 'MM0001', name: '奢润水光精华面膜', category: '护肤口服', price: 59 },
-  { id: 'MM0002', name: '积雪草修护面膜', category: '护肤口服', price: 129 },
-  { id: 'MM0003', name: '玻尿酸补水保湿面膜', category: '护肤口服', price: 59 },
-  { id: 'MM0004', name: '紧致提拉面膜', category: '护肤口服', price: 59 },
-  { id: 'MM0010', name: '烟酰胺亮肤面膜', category: '护肤口服', price: 98 },
-  { id: 'MS0002', name: '神经酰胺修护精华', category: '护肤口服', price: 129 },
-  { id: 'PW0001', name: '小分子肽修护套装', category: '护肤口服', price: 98 },
-  { id: 'PW0005', name: '富勒烯抗氧套装', category: '护肤口服', price: 129 },
-  { id: 'PW0006', name: '依克多因修护精华', category: '护肤口服', price: 98 },
-  { id: 'PW0007', name: '蓝铜胜肽抗老精华(PLUS版)', category: '护肤口服', price: 129 },
-  { id: 'PW0008', name: '依克多因水光精华(PLUS版)', category: '护肤口服', price: 69 },
-
-  // 洗护
-  { id: 'XH010', name: '氨基酸温和洁面乳(50ml体验装)', category: '洗护', price: 0 },
-  { id: 'XH011', name: '玻尿酸洁面乳(50ml体验装)', category: '洗护', price: 0 },
-  { id: 'XH012', name: '氨基酸洁面慕斯(50ml体验装)', category: '洗护', price: 0 },
-  { id: 'XH013', name: '山茶花氨基酸洁面慕斯', category: '洗护', price: 0 },
-  { id: 'XH014', name: '山茶花沐浴露', category: '洗护', price: 0 },
-  { id: 'XH015', name: '山茶花护发素', category: '洗护', price: 0 },
-  { id: 'XH016', name: '山茶花洗发水', category: '洗护', price: 98 },
-  { id: 'XH017', name: '山茶花沐浴露(正装)', category: '洗护', price: 78 },
-  { id: 'XH018', name: '山茶花护发素(正装)', category: '洗护', price: 78 },
-  { id: 'XH019', name: '角鲨烷融融身体冷霜', category: '洗护', price: 0 },
-  { id: 'XH020', name: '奢宠肌肤氨基酸沐浴露(无界香型)', category: '洗护', price: 0 },
-  { id: 'XH021', name: '白池花琥珀香氛沐浴油(白檀香型)', category: '洗护', price: 0 },
-  { id: 'YX0001', name: '奢护洗发露', category: '洗护', price: 260 },
-  { id: 'YX0002', name: '奢护发膜(50ml)', category: '洗护', price: 0 },
-  { id: 'YX0003', name: '氨基酸洁面乳(正装)', category: '洗护', price: 139 },
-  { id: 'YX0004', name: '玻尿酸补水面膜', category: '洗护', price: 100 },
-  { id: 'YX0005', name: '神经酰胺修护乳', category: '洗护', price: 100 },
-  { id: 'YX0006', name: '依克多因修护霜', category: '洗护', price: 100 },
-  { id: 'YX0007', name: '烟酰胺亮肤精华液', category: '洗护', price: 40 },
-  { id: 'YX0008', name: '富勒烯抗氧面膜', category: '洗护', price: 139 },
-  { id: 'YX0009', name: '烟酰胺亮肤精华水', category: '洗护', price: 80 },
-  { id: 'YX0010', name: '玻尿酸补水面膜(院线版)', category: '洗护', price: 80 },
-  { id: 'YX0011', name: '蓝铜胜肽抗老面膜', category: '洗护', price: 100 },
-  { id: 'YX0012', name: '依克多因修护面膜', category: '洗护', price: 100 },
-  { id: 'YX0013', name: '角鲨烷修护精华', category: '洗护', price: 120 },
-  { id: 'YX0014', name: '玻尿酸补水面膜(院线体验)', category: '洗护', price: 120 },
-  { id: 'YX0015', name: '神经酰胺修护精华(50ml)', category: '洗护', price: 120 },
-  { id: 'YX0016', name: '氨基酸洁面慕斯(院线)', category: '洗护', price: 120 },
-  { id: 'YX0017', name: '烟酰胺亮肤面膜', category: '洗护', price: 166 },
-  { id: 'YX0018', name: '氨基酸洁面慕斯(院线体验)', category: '洗护', price: 120 },
-  { id: 'YX0019', name: '玻尿酸补水面膜(院线版)', category: '洗护', price: 80 },
-  { id: 'YX0020', name: '富勒烯抗氧面膜(院线)', category: '洗护', price: 100 },
-  { id: 'YX0021', name: '神经酰胺修护面膜', category: '洗护', price: 80 },
-  { id: 'YX0022', name: '蓝铜胜肽抗老面膜(院线)', category: '洗护', price: 299 },
-  { id: 'YX0023', name: '依克多因修护套装(院线)', category: '洗护', price: 840 },
-  { id: 'YX0024', name: 'DNA修护洗发露(院线)', category: '洗护', price: 498 },
-  { id: 'YX0025', name: '奢润面膜(院线版)', category: '洗护', price: 399 },
-  { id: 'YX0026', name: '氨基酸洗护套装(院线)', category: '洗护', price: 158 },
-  { id: 'YX0027', name: '玻尿酸补水面膜+洗护套装', category: '洗护', price: 120 },
-
-  // 周边
-  { id: 'QT0007', name: '化妆包A2 296', category: '周边', price: 429 },
-  { id: 'QT0010', name: '礼盒', category: '周边', price: 2 },
-  { id: 'QT0015', name: '美妆蛋', category: '周边', price: 1.16 },
-  { id: 'QT0018', name: '化妆刷2号 桑妮专属礼盒刷套组', category: '周边', price: 0.66 },
-  { id: 'QT0019', name: '化妆刷套装', category: '周边', price: 9.66 },
-  { id: 'QT0021', name: '化妆棉', category: '周边', price: 9.8 },
-  { id: 'QT0023', name: '桑妮定制发圈', category: '周边', price: 1680 },
-  { id: 'QT0024', name: '桑妮定制粉扑', category: '周边', price: 980 },
-  { id: 'QT0025', name: '桑妮定制化妆袋', category: '周边', price: 1280 },
-  { id: 'QT0031', name: '桑妮专属礼盒', category: '周边', price: 98 },
-  { id: 'QT0033', name: '定制礼盒(大)', category: '周边', price: 10 },
-  { id: 'QT0036', name: '定制礼盒(中)', category: '周边', price: 10 },
-  { id: 'QT0037', name: '定制礼盒(小)', category: '周边', price: 10 },
-  { id: 'QT0038', name: '定制礼盒(特大)', category: '周边', price: 10 },
-  { id: 'QT0039', name: '定制礼盒(超大)', category: '周边', price: 10 },
-  { id: 'QT0041', name: '试用装随机发', category: '周边', price: 10 },
-  { id: 'QT0042', name: '试用装随机发(PLUS)', category: '周边', price: 10 },
-  { id: 'QT0044', name: '积分兑换专区', category: '周边', price: 10 },
-  { id: 'QT0045', name: '新品体验礼盒', category: '周边', price: 499 },
-  { id: 'QT0046', name: '会员专属礼盒套装', category: '周边', price: 599 },
-  { id: 'QT0047', name: '桑妮限定节日礼盒', category: '周边', price: 1980 },
-  { id: 'QT0048', name: '桑妮限定礼盒(M)', category: '周边', price: 1080 },
-  { id: 'QT0049', name: '桑妮限定礼盒(S)', category: '周边', price: 1380 },
-  { id: 'QT0050', name: '桑妮限定礼盒(XS)', category: '周边', price: 1380 },
-  { id: 'QT0051', name: '会员专属礼袋', category: '周边', price: 1280 },
-  { id: 'QT0052', name: '桑妮专属礼品袋', category: '周边', price: 1580 },
-  { id: 'QT0053', name: '桑妮专属礼袋(大)', category: '周边', price: 2180 },
-  { id: 'QT0054', name: '桑妮专属礼袋(特大)', category: '周边', price: 499 },
-  { id: 'QT0055', name: '随机礼品', category: '周边', price: 10 },
-  { id: 'QT0056', name: '随机礼品(大)', category: '周边', price: 10 },
-  { id: 'QT0057', name: '随机礼品(小)', category: '周边', price: 10 },
-  { id: 'QT0059', name: '积分兑换礼品', category: '周边', price: 199 },
-  { id: 'QT0060', name: '积分兑换礼品(大)', category: '周边', price: 199 },
-  { id: 'QT0061', name: '积分兑换礼品(特大)', category: '周边', price: 199 },
-  { id: 'QT0062', name: '20000积分兑换礼品', category: '周边', price: 89 },
-  { id: 'QT0063', name: '10000mL礼品卡', category: '周边', price: 129 },
-  { id: 'QT0064', name: '礼品卡', category: '周边', price: 68 },
-  { id: 'QT0065', name: '礼品券', category: '周边', price: 38 },
-  { id: 'QT0072', name: '积分兑换礼品卡', category: '周边', price: 3.96 },
-  { id: 'QT0073', name: '免费试用装', category: '周边', price: 10 },
-  { id: 'QT0074', name: '免费礼品', category: '周边', price: 10 },
-  { id: 'QT0075', name: '积分礼品', category: '周边', price: 2.98 },
-  { id: 'QT0076', name: '会员专属积分礼品', category: '周边', price: 59.8 },
-  { id: 'QT0078', name: '积分兑换', category: '周边', price: 10 },
-  { id: 'QT0079', name: '积分兑换 桑妮专属', category: '周边', price: 98 },
-  { id: 'QT0080', name: '积分兑换 桑妮专属(L)', category: '周边', price: 98 },
-  { id: 'QT0081', name: '积分兑换 桑妮专属(XL)', category: '周边', price: 98 },
-  { id: 'QT0082', name: '积分兑换 桑妮专属(XXL)', category: '周边', price: 98 },
-  { id: 'QT0083', name: '积分兑换 桑妮专属(XXXL)', category: '周边', price: 98 },
-
-  // 院线
-  { id: 'BC5082', name: '桑妮专属院线礼盒', category: '院线', price: 10 },
-  { id: 'BC5085', name: '桑妮专属院线礼盒(大)', category: '院线', price: 10 },
-  { id: 'BC5086', name: '桑妮专属院线礼盒(特大)', category: '院线', price: 10 },
-  { id: 'BC5118', name: '院线专用面膜 (150ml)', category: '院线', price: 10 },
-  { id: 'BC5119', name: '院线专用精华 (180ml)', category: '院线', price: 10 },
-  { id: 'BC5122', name: '院线专用洁面', category: '院线', price: 10 },
-  { id: 'MM0016', name: '桑妮水光弹润面膜', category: '院线', price: 198 },
-];
-
 // ==================== 动态商品数据（前台显示来源） ====================
 var PRODUCTS = [];
 
 /**
+ * 重绘商品相关视图（分类 Tab、商品列表、结算栏）
+ * 抽出统一入口，避免多处重复三连渲染
+ */
+function renderProductViews() {
+  renderTabs();
+  renderProducts();
+  updateCheckout();
+}
+
+/**
  * 从 Supabase 加载商品数据
- * 策略：先读 localStorage 缓存秒开 → 异步刷新 Supabase → 硬编码兜底
+ *
+ * 数据源策略：Supabase 是商品的唯一真实来源（single source of truth），
+ * 绝不注入硬编码假数据（历史上"前台显示后台没添加过的商品"正是硬编码兜底所致）。
+ * 1. 先读 localStorage 缓存，秒开页面；
+ * 2. 再查 Supabase：成功（含空数组）都以远程为准并同步缓存，
+ *    从而清除后台已删除商品的旧缓存；
+ * 3. 查询失败（如免费版休眠 / 断网）：保留已有缓存继续可用，并显示
+ *    "云端断连"横幅提示；连缓存都没有时展示错误提示。这样后端临时不可达
+ *    时是"降级到本地缓存"，而不是白屏，也不是伪造商品。
  */
 async function loadProductsFromSupabase() {
+  // 1. 缓存秒开
   var cached = localStorage.getItem('products_cache');
   if (cached) {
     try {
       PRODUCTS = JSON.parse(cached);
-      renderTabs();
-      renderProducts();
-      updateCheckout();
+      renderProductViews();
     } catch (e) {
-      // 缓存损坏，继续
+      // 缓存损坏则忽略，等待远程数据覆盖
     }
   }
 
+  // 未配置 Supabase：无远程数据源，直接呈现当前（可能为空）状态，不伪造商品
   if (!SupabaseClient.isConfigured) {
-    if (PRODUCTS.length === 0) {
-      PRODUCTS = HARDCODED_PRODUCTS;
-      renderTabs();
-      renderProducts();
-      updateCheckout();
-    }
+    renderProductViews();
     return;
   }
 
+  // 2. 以 Supabase 结果为准
   try {
     var data = await SupabaseClient.restQuery('products', 'is_active=eq.true&order=id.asc');
-    if (data && data.length > 0) {
-      PRODUCTS = data.map(function (p) {
-        return {
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          price: parseFloat(p.price) || 0,
-        };
-      });
-      localStorage.setItem('products_cache', JSON.stringify(PRODUCTS));
-      renderTabs();
-      renderProducts();
-      updateCheckout();
-    } else if (PRODUCTS.length === 0) {
-      PRODUCTS = HARDCODED_PRODUCTS;
-      renderTabs();
-      renderProducts();
-      updateCheckout();
-    }
+    PRODUCTS = (data || []).map(function (p) {
+      return {
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        price: parseFloat(p.price) || 0,
+      };
+    });
+    // 空结果也写回缓存，主动清除已删除商品的旧缓存
+    localStorage.setItem('products_cache', JSON.stringify(PRODUCTS));
+    hideOfflineBanner();       // 远程恢复正常，撤下断连提示
+    renderProductViews();
   } catch (e) {
+    // 3. 查询失败：保留缓存/空态显示，弹出断连横幅，绝不回退硬编码
+    showOfflineBanner();
+    renderProductViews();
     if (PRODUCTS.length === 0) {
-      PRODUCTS = HARDCODED_PRODUCTS;
-      renderTabs();
-      renderProducts();
-      updateCheckout();
+      showToast('商品加载失败，请检查网络后重试');
     }
   }
 }
@@ -259,6 +121,7 @@ function cacheDom() {
   dom.btnSubmitOrder = document.getElementById('btnSubmitOrder');
   dom.toast = document.getElementById('toast');
   dom.btnCancel = document.getElementById('btnCancel');
+  dom.offlineBanner = document.getElementById('offlineBanner');
 }
 
 // ==================== 不可变状态工具函数 ====================
@@ -727,6 +590,19 @@ function showToast(msg) {
   dom.toast.textContent = msg;
   dom.toast.classList.add('show');
   setTimeout(() => dom.toast.classList.remove('show'), 2500);
+}
+
+/**
+ * 显示"云端断连"横幅：后端不可达（如 Supabase 免费版休眠）时，
+ * 提示当前为本地缓存数据，而非静默白屏。
+ */
+function showOfflineBanner() {
+  if (dom.offlineBanner) dom.offlineBanner.hidden = false;
+}
+
+/** 云端恢复后撤下断连横幅 */
+function hideOfflineBanner() {
+  if (dom.offlineBanner) dom.offlineBanner.hidden = true;
 }
 
 // ==================== 初始化 ====================

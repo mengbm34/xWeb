@@ -1,0 +1,55 @@
+name: Keep Supabase Awake
+
+# 目的：Supabase 免费版项目连续约 7 天无 API 请求会被自动暂停（pause），
+# 一旦暂停，前后台的商品/订单数据源即不可达、页面白屏。
+# 本定时任务每天向 Supabase REST API 发一次请求，让项目保持"活跃"，避免休眠。
+#
+# 说明：
+# - URL 和 anon/publishable key 直接从 js/supabase-client.js 提取（单一真源，
+#   改配置时无需再改本文件，也就不会因忘记同步而失效）。
+# - 该 key 属于设计上可公开的公钥（前端源码里本就明文存在），无需配 Secret。
+# - 手动触发（workflow_dispatch）可随时用于"唤醒"或自检。
+
+on:
+  schedule:
+    # 每天 04:41 UTC 跑一次（避开整点高峰，降低被 GitHub 延迟/跳过的概率）。
+    # 每天一次即使偶尔被跳过，也远小于 7 天休眠阈值，留足安全余量。
+    - cron: '41 4 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ping Supabase REST API to prevent free-tier pause
+        run: |
+          set -euo pipefail
+          # 从前端配置提取 URL 与公钥，保持单一真源
+          URL=$(grep -oE "https://[a-z0-9]+\.supabase\.co" js/supabase-client.js | head -1)
+          KEY=$(grep -oE "sb_(publishable|secret)_[A-Za-z0-9_]+|eyJ[A-Za-z0-9._-]+" js/supabase-client.js | head -1)
+
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "::error::未能从 js/supabase-client.js 解析出 Supabase URL 或 key"
+            exit 1
+          fi
+
+          echo "Pinging $URL ..."
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "$URL/rest/v1/products?select=id&limit=1" \
+            -H "apikey: $KEY" \
+            -H "Authorization: Bearer $KEY")
+
+          echo "HTTP $code"
+          if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+            echo "✅ 项目在线，保活成功"
+          else
+            # 非 2xx（含连接失败 000）说明项目可能已暂停或配置有误，
+            # 让本次运行失败以便 GitHub 邮件告警，第一时间发现问题。
+            echo "::error::保活请求异常（HTTP $code），项目可能已暂停或密钥失效，请到 Supabase 控制台 Resume。"
+            exit 1
+          fi

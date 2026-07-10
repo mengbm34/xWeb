@@ -21,6 +21,11 @@
     </div>
   </header>
 
+  <!-- 云端断连提示横幅（后端不可达时由 JS 显示，平时隐藏） -->
+  <div class="offline-banner" id="offlineBanner" role="status" aria-live="polite" hidden>
+    ⚠️ 云端连接失败，当前显示的是本地缓存数据，请稍后重试
+  </div>
+
   <!-- 搜索栏（移动端） -->
   <div class="search-bar mobile-only">
     <input type="text" id="searchInput" placeholder="搜索商品名称或编码..." autocomplete="off">

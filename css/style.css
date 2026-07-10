@@ -697,6 +697,23 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
+/* 云端断连提示横幅：全宽、暖色，明确告知当前为本地缓存数据 */
+.offline-banner {
+  position: sticky;
+  top: 0;
+  z-index: 350;
+  background: var(--accent);
+  color: #6b4a1f;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.offline-banner[hidden] {
+  display: none;
+}
+
 /* ========================================
    PC 端响应式布局（>= 768px）
    ======================================== */
